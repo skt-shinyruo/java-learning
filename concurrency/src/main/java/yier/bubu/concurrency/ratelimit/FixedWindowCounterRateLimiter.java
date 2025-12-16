@@ -15,6 +15,13 @@ public final class FixedWindowCounterRateLimiter {
     private final long windowSizeMillis;
     private final LongSupplier timeMillisSupplier;
 
+    /**
+     * 当前窗口的起始时间（向下取整到 windowSizeMillis 的倍数）。
+     * <p>
+     * 例如 windowSizeMillis=1000：
+     * - 0~999ms => windowStartMillis=0
+     * - 1000~1999ms => windowStartMillis=1000
+     */
     private long windowStartMillis;
     private int countInWindow;
 
@@ -49,6 +56,7 @@ public final class FixedWindowCounterRateLimiter {
 
         long now = timeMillisSupplier.getAsLong();
         long start = windowStart(now);
+        // 进入新的时间窗口后，计数清零：这是固定窗口算法最核心的状态迁移。
         if (start != windowStartMillis) {
             windowStartMillis = start;
             countInWindow = 0;
@@ -70,8 +78,8 @@ public final class FixedWindowCounterRateLimiter {
     }
 
     private long windowStart(long nowMillis) {
+        // 使用 floorDiv 而不是直接 /，避免 nowMillis 可能为负数时出现不符合预期的取整行为。
         long windowId = Math.floorDiv(nowMillis, windowSizeMillis);
         return windowId * windowSizeMillis;
     }
 }
-

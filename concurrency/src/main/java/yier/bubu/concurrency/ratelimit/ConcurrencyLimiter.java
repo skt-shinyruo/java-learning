@@ -22,6 +22,7 @@ public final class ConcurrencyLimiter {
     }
 
     public Permit tryAcquire() {
+        // 典型的 CAS 自旋：在不加锁的情况下“抢占一个并发名额”。
         while (true) {
             int current = inFlight.get();
             if (current >= maxInFlight) {
@@ -44,6 +45,8 @@ public final class ConcurrencyLimiter {
     private void release() {
         int after = inFlight.decrementAndGet();
         if (after < 0) {
+            // 理论上不会发生：Permit.close() 具备幂等保护。
+            // 这里作为防御性检查，避免未来改动引入的计数错误悄悄扩散。
             inFlight.incrementAndGet();
             throw new IllegalStateException("inFlight became negative");
         }
@@ -60,10 +63,10 @@ public final class ConcurrencyLimiter {
 
         @Override
         public void close() {
+            // close() 允许被多次调用（幂等）；只在第一次释放名额。
             if (released.compareAndSet(false, true)) {
                 limiter.release();
             }
         }
     }
 }
-

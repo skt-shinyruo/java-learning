@@ -62,6 +62,7 @@ public final class AdaptiveConcurrencyLimiter {
     }
 
     public Permit tryAcquire() {
+        // 与 ConcurrencyLimiter 类似：在当前 limit 限制内，抢占一个 in-flight 名额。
         while (true) {
             int limitSnapshot = currentLimit.get();
             int current = inFlight.get();
@@ -69,6 +70,7 @@ public final class AdaptiveConcurrencyLimiter {
                 return null;
             }
             if (inFlight.compareAndSet(current, current + 1)) {
+                // startMillis 用于后续计算“这次请求的延迟”，作为自适应调参的信号。
                 return new Permit(this, timeMillisSupplier.getAsLong());
             }
         }
@@ -86,8 +88,10 @@ public final class AdaptiveConcurrencyLimiter {
         long now = timeMillisSupplier.getAsLong();
         long latencyMillis = Math.max(0L, now - startMillis);
 
+        // 先释放 in-flight 名额：无论成功/失败，都不应该占用并发配额。
         inFlight.decrementAndGet();
 
+        // 调整 limit 需要串行化，否则高并发下多个线程同时“加/减”会导致震荡更明显。
         synchronized (this) {
             int limit = currentLimit.get();
             int newLimit = limit;
@@ -96,6 +100,7 @@ public final class AdaptiveConcurrencyLimiter {
                     newLimit = limit + 1;
                 }
             } else {
+                // 乘性下降：失败/慢请求时快速收缩并发，保护下游。
                 newLimit = Math.max(minLimit, (int) Math.floor(limit * decreaseFactor));
                 if (newLimit == limit && limit > minLimit) {
                     newLimit = limit - 1;
@@ -126,6 +131,8 @@ public final class AdaptiveConcurrencyLimiter {
 
         @Override
         public void close() {
+            // 为了方便 try-with-resources，这里把 close() 视为成功完成。
+            // 如果你需要表达失败，请显式调用 onFailure()。
             onSuccess();
         }
 
@@ -136,4 +143,3 @@ public final class AdaptiveConcurrencyLimiter {
         }
     }
 }
-

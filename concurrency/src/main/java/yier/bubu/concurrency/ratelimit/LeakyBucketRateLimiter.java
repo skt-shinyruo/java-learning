@@ -67,12 +67,13 @@ public final class LeakyBucketRateLimiter {
         long now = timeMillisSupplier.getAsLong();
         long elapsedMillis = now - lastUpdateMillis;
         if (elapsedMillis <= 0) {
+            // 系统时间回拨（或手动时间源倒退）时不进行 leak，避免 water 出现反常的增长/抖动。
             return;
         }
 
+        // 按时间线性漏出（积压减少），本实现不维护真实队列，只维护“积压量”。
         double leaked = elapsedMillis * leakPerMillis;
         water = Math.max(0.0, water - leaked);
         lastUpdateMillis = now;
     }
 }
-

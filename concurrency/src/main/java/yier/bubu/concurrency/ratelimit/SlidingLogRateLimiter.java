@@ -49,6 +49,8 @@ public final class SlidingLogRateLimiter {
 
         long nowMillis = timeMillisSupplier.getAsLong();
         long windowStartMillis = nowMillis - windowSizeMillis;
+        // 移除窗口外的历史记录：队头永远是最早的时间戳，因此可以一直从前往后清理。
+        // 该步骤的时间复杂度与“过期的数量”成正比。
         while (!acceptedTimestampsMillis.isEmpty()) {
             long first = acceptedTimestampsMillis.peekFirst();
             if (first > windowStartMillis) {
@@ -60,6 +62,7 @@ public final class SlidingLogRateLimiter {
         if (acceptedTimestampsMillis.size() + permits > limit) {
             return false;
         }
+        // permits 视为同一时刻到达的多个请求：记录相同的时间戳即可。
         for (int i = 0; i < permits; i++) {
             acceptedTimestampsMillis.addLast(nowMillis);
         }
@@ -69,6 +72,7 @@ public final class SlidingLogRateLimiter {
     public synchronized int getCurrentSize() {
         long nowMillis = timeMillisSupplier.getAsLong();
         long windowStartMillis = nowMillis - windowSizeMillis;
+        // 查询时也会顺便清理过期记录，保证返回值代表“最近窗口内的真实数量”。
         while (!acceptedTimestampsMillis.isEmpty()) {
             long first = acceptedTimestampsMillis.peekFirst();
             if (first > windowStartMillis) {
@@ -79,4 +83,3 @@ public final class SlidingLogRateLimiter {
         return acceptedTimestampsMillis.size();
     }
 }
-

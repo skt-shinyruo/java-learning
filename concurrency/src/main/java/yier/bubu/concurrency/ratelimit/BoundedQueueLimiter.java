@@ -26,6 +26,7 @@ public final class BoundedQueueLimiter {
         if (queue.size() >= capacity) {
             return false;
         }
+        // 这里只需要“计数”，不关心元素内容，因此用占位对象即可。
         queue.addLast(Boolean.TRUE);
         return true;
     }
@@ -46,4 +47,3 @@ public final class BoundedQueueLimiter {
         return capacity;
     }
 }
-
