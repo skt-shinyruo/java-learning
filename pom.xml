@@ -15,6 +15,7 @@
   <modules>
     <module>base</module>
     <module>jdk</module>
+    <module>jvm</module>
     <module>netty</module>
     <module>concurrency</module>
   </modules>
@@ -65,4 +66,3 @@
     </pluginManagement>
   </build>
 </project>
-
