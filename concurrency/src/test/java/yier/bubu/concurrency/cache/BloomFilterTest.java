@@ -24,4 +24,62 @@ public class BloomFilterTest {
         Assert.assertTrue(filter.bitSize() > 0);
         Assert.assertTrue(filter.hashFunctionCount() > 0);
     }
+
+    @Test
+    public void bloomFilter_shouldRejectInvalidConstructorArguments() {
+        assertIllegalArgument(new ThrowingRunnable() {
+            @Override
+            public void run() {
+                new BloomFilter<String>(0, 0.01);
+            }
+        });
+        assertIllegalArgument(new ThrowingRunnable() {
+            @Override
+            public void run() {
+                new BloomFilter<String>(10, 1.0);
+            }
+        });
+    }
+
+    @Test
+    public void bloomFilter_shouldUseMoreBitsForLowerFalsePositiveProbability() {
+        BloomFilter<String> loose = new BloomFilter<String>(1_000, 0.05);
+        BloomFilter<String> strict = new BloomFilter<String>(1_000, 0.001);
+
+        Assert.assertTrue(strict.bitSize() > loose.bitSize());
+    }
+
+    @Test
+    public void bloomFilter_shouldRejectNullValues() {
+        final BloomFilter<String> filter = new BloomFilter<String>(100, 0.01);
+
+        assertNullPointer(new ThrowingRunnable() {
+            @Override
+            public void run() {
+                filter.put(null);
+            }
+        });
+    }
+
+    private interface ThrowingRunnable {
+        void run();
+    }
+
+    private static void assertIllegalArgument(ThrowingRunnable runnable) {
+        try {
+            runnable.run();
+            Assert.fail("expected IllegalArgumentException");
+        } catch (IllegalArgumentException expected) {
+            // expected
+        }
+    }
+
+    private static void assertNullPointer(ThrowingRunnable runnable) {
+        try {
+            runnable.run();
+            Assert.fail("expected NullPointerException");
+        } catch (NullPointerException expected) {
+            // expected
+        }
+    }
 }

@@ -13,6 +13,8 @@ public final class BloomFilter<T> {
     private final BitSet bits;
 
     public BloomFilter(long expectedInsertions, double falsePositiveProbability) {
+        validateExpectedInsertions(expectedInsertions);
+        validateFalsePositiveProbability(falsePositiveProbability);
         this.expectedInsertions = expectedInsertions;
         this.falsePositiveProbability = falsePositiveProbability;
         this.bitSize = optimalBitSize(expectedInsertions, falsePositiveProbability);
@@ -57,6 +59,18 @@ public final class BloomFilter<T> {
 
     static int optimalHashFunctionCount(long expectedInsertions, int bitSize) {
         return Math.max(1, (int) Math.round((bitSize / (double) expectedInsertions) * LN_2));
+    }
+
+    private static void validateExpectedInsertions(long expectedInsertions) {
+        if (expectedInsertions <= 0) {
+            throw new IllegalArgumentException("expectedInsertions must be > 0");
+        }
+    }
+
+    private static void validateFalsePositiveProbability(double falsePositiveProbability) {
+        if (!(falsePositiveProbability > 0.0D && falsePositiveProbability < 1.0D)) {
+            throw new IllegalArgumentException("falsePositiveProbability must be in (0, 1)");
+        }
     }
 
     private int[] indexesFor(T value) {
