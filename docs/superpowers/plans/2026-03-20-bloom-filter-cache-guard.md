@@ -69,7 +69,7 @@ public class BloomFilterTest {
 
 - [ ] **Step 2: Run the Bloom filter test class to verify it is red**
 
-Run: `mvn -pl concurrency test -Dtest=BloomFilterTest`
+Run: `mvn -pl concurrency -am test -Dtest=BloomFilterTest`
 
 Expected: test compilation fails because `BloomFilter` does not exist yet.
 
@@ -168,7 +168,7 @@ public final class BloomFilter<T> {
 
 - [ ] **Step 4: Run the Bloom filter tests to verify they are green**
 
-Run: `mvn -pl concurrency test -Dtest=BloomFilterTest`
+Run: `mvn -pl concurrency -am test -Dtest=BloomFilterTest`
 
 Expected: PASS, `BloomFilterTest` green.
 
@@ -250,7 +250,7 @@ private static void assertNullPointer(ThrowingRunnable runnable) {
 
 - [ ] **Step 2: Run the Bloom filter test class to verify it is red for the new behavior**
 
-Run: `mvn -pl concurrency test -Dtest=BloomFilterTest`
+Run: `mvn -pl concurrency -am test -Dtest=BloomFilterTest`
 
 Expected: FAIL due to missing validation behavior or missing helper methods in the test.
 
@@ -271,7 +271,7 @@ Implementation notes:
 
 - [ ] **Step 4: Re-run the Bloom filter tests**
 
-Run: `mvn -pl concurrency test -Dtest=BloomFilterTest`
+Run: `mvn -pl concurrency -am test -Dtest=BloomFilterTest`
 
 Expected: PASS, including validation and sizing assertions.
 
@@ -338,7 +338,7 @@ public class ProductCatalogExistenceGuardTest {
 
 - [ ] **Step 2: Run the cache-guard test class to verify it is red**
 
-Run: `mvn -pl concurrency test -Dtest=ProductCatalogExistenceGuardTest`
+Run: `mvn -pl concurrency -am test -Dtest=ProductCatalogExistenceGuardTest`
 
 Expected: test compilation fails because `ProductCatalogExistenceGuard` does not exist yet.
 
@@ -381,7 +381,7 @@ Package documentation should explain:
 
 - [ ] **Step 4: Run the cache-guard tests**
 
-Run: `mvn -pl concurrency test -Dtest=ProductCatalogExistenceGuardTest`
+Run: `mvn -pl concurrency -am test -Dtest=ProductCatalogExistenceGuardTest`
 
 Expected: PASS, with the chosen example data blocking at least one obviously absent product ID.
 
@@ -405,13 +405,13 @@ git commit -m "feat(concurrency): add bloom filter cache guard example"
 
 - [ ] **Step 1: Run the new cache package test classes together**
 
-Run: `mvn -pl concurrency test -Dtest=BloomFilterTest,ProductCatalogExistenceGuardTest`
+Run: `mvn -pl concurrency -am test -Dtest=BloomFilterTest,ProductCatalogExistenceGuardTest`
 
 Expected: PASS, both new test classes green.
 
 - [ ] **Step 2: Run the full concurrency module test suite**
 
-Run: `mvn -pl concurrency test`
+Run: `mvn -pl concurrency -am test`
 
 Expected: PASS, no regressions in existing concurrency demos.
 
