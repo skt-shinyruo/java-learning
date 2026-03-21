@@ -18,6 +18,7 @@
     <module>jvm</module>
     <module>netty</module>
     <module>concurrency</module>
+    <module>redis</module>
   </modules>
 
   <properties>

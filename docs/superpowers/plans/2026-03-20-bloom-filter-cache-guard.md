@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add a JDK-only Bloom filter implementation and a cache-penetration guard example in the `concurrency` module, documented by focused JUnit tests.
+**Goal:** Add a JDK-only BloomFilter implementation and a BloomFilter-based cache-penetration guard example in the `redis` module, documented by focused JUnit tests.
 
-**Architecture:** Introduce a new `yier.bubu.concurrency.cache` package. `BloomFilter<T>` owns parameter sizing, hashing, and membership checks over an in-memory `BitSet`, while `ProductCatalogExistenceGuard` wraps the filter in product-catalog business language so tests can show how invalid IDs get blocked before Redis or MySQL lookups.
+**Architecture:** Place both `BloomFilter<T>` and `ProductCatalogExistenceGuard` in the topic package `yier.bubu.redis.bloomfilter`. `BloomFilter<T>` owns parameter sizing, hashing, and membership checks over an in-memory `BitSet`, while `ProductCatalogExistenceGuard` wraps the filter in product-catalog business language so tests can show how invalid IDs get blocked before Redis or MySQL lookups.
 
 **Tech Stack:** Java 8, Maven, JUnit 4, JDK `BitSet`, JDK collections
 
@@ -12,15 +12,15 @@
 
 ## File Structure
 
-- Create: `concurrency/src/main/java/yier/bubu/concurrency/cache/BloomFilter.java`
+- Create: `redis/src/main/java/yier/bubu/redis/bloomfilter/BloomFilter.java`
   Responsibility: generic Bloom filter with constructor validation, formula-based sizing, `put`, `mightContain`, and lightweight read-only metadata accessors.
-- Create: `concurrency/src/main/java/yier/bubu/concurrency/cache/ProductCatalogExistenceGuard.java`
+- Create: `redis/src/main/java/yier/bubu/redis/bloomfilter/ProductCatalogExistenceGuard.java`
   Responsibility: thin business wrapper around `BloomFilter<Long>` for cache-penetration prevention semantics.
-- Create: `concurrency/src/main/java/yier/bubu/concurrency/cache/package-info.java`
-  Responsibility: package-level documentation for cache-facing in-memory mechanisms and Bloom filter trade-offs.
-- Create: `concurrency/src/test/java/yier/bubu/concurrency/cache/BloomFilterTest.java`
+- Create: `redis/src/main/java/yier/bubu/redis/bloomfilter/package-info.java`
+  Responsibility: package-level documentation for BloomFilter-related learning content and cache-penetration usage.
+- Create: `redis/src/test/java/yier/bubu/redis/bloomfilter/BloomFilterTest.java`
   Responsibility: executable documentation for Bloom filter insert/query behavior, sizing, and argument validation.
-- Create: `concurrency/src/test/java/yier/bubu/concurrency/cache/ProductCatalogExistenceGuardTest.java`
+- Create: `redis/src/test/java/yier/bubu/redis/bloomfilter/ProductCatalogExistenceGuardTest.java`
   Responsibility: executable documentation for the product-ID cache-penetration use case.
 
 ## Preflight
@@ -32,13 +32,13 @@
 ### Task 1: Add the Generic Bloom Filter Core
 
 **Files:**
-- Create: `concurrency/src/test/java/yier/bubu/concurrency/cache/BloomFilterTest.java`
-- Create: `concurrency/src/main/java/yier/bubu/concurrency/cache/BloomFilter.java`
+- Create: `redis/src/test/java/yier/bubu/redis/bloomfilter/BloomFilterTest.java`
+- Create: `redis/src/main/java/yier/bubu/redis/bloomfilter/BloomFilter.java`
 
 - [ ] **Step 1: Write the failing Bloom filter tests**
 
 ```java
-package yier.bubu.concurrency.cache;
+package yier.bubu.redis.bloomfilter;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -69,14 +69,14 @@ public class BloomFilterTest {
 
 - [ ] **Step 2: Run the Bloom filter test class to verify it is red**
 
-Run: `mvn -pl concurrency -am test -Dtest=BloomFilterTest -Dsurefire.failIfNoSpecifiedTests=false`
+Run: `mvn -pl redis -am test -Dtest=BloomFilterTest -Dsurefire.failIfNoSpecifiedTests=false`
 
 Expected: test compilation fails because `BloomFilter` does not exist yet.
 
 - [ ] **Step 3: Write the minimal Bloom filter implementation**
 
 ```java
-package yier.bubu.concurrency.cache;
+package yier.bubu.redis.bloomfilter;
 
 import java.util.BitSet;
 import java.util.Objects;
@@ -168,23 +168,23 @@ public final class BloomFilter<T> {
 
 - [ ] **Step 4: Run the Bloom filter tests to verify they are green**
 
-Run: `mvn -pl concurrency -am test -Dtest=BloomFilterTest -Dsurefire.failIfNoSpecifiedTests=false`
+Run: `mvn -pl redis -am test -Dtest=BloomFilterTest -Dsurefire.failIfNoSpecifiedTests=false`
 
 Expected: PASS, `BloomFilterTest` green.
 
 - [ ] **Step 5: Commit the generic Bloom filter core**
 
 ```bash
-git add concurrency/src/main/java/yier/bubu/concurrency/cache/BloomFilter.java \
-        concurrency/src/test/java/yier/bubu/concurrency/cache/BloomFilterTest.java
+git add redis/src/main/java/yier/bubu/redis/bloomfilter/BloomFilter.java \
+        redis/src/test/java/yier/bubu/redis/bloomfilter/BloomFilterTest.java
 git commit -m "feat(concurrency): add bloom filter core"
 ```
 
 ### Task 2: Tighten Bloom Filter Validation and Sizing Coverage
 
 **Files:**
-- Modify: `concurrency/src/test/java/yier/bubu/concurrency/cache/BloomFilterTest.java`
-- Modify: `concurrency/src/main/java/yier/bubu/concurrency/cache/BloomFilter.java`
+- Modify: `redis/src/test/java/yier/bubu/redis/bloomfilter/BloomFilterTest.java`
+- Modify: `redis/src/main/java/yier/bubu/redis/bloomfilter/BloomFilter.java`
 
 - [ ] **Step 1: Extend the Bloom filter test with validation and sizing expectations**
 
@@ -250,7 +250,7 @@ private static void assertNullPointer(ThrowingRunnable runnable) {
 
 - [ ] **Step 2: Run the Bloom filter test class to verify it is red for the new behavior**
 
-Run: `mvn -pl concurrency -am test -Dtest=BloomFilterTest -Dsurefire.failIfNoSpecifiedTests=false`
+Run: `mvn -pl redis -am test -Dtest=BloomFilterTest -Dsurefire.failIfNoSpecifiedTests=false`
 
 Expected: FAIL due to missing validation behavior or missing helper methods in the test.
 
@@ -271,23 +271,23 @@ Implementation notes:
 
 - [ ] **Step 4: Re-run the Bloom filter tests**
 
-Run: `mvn -pl concurrency -am test -Dtest=BloomFilterTest -Dsurefire.failIfNoSpecifiedTests=false`
+Run: `mvn -pl redis -am test -Dtest=BloomFilterTest -Dsurefire.failIfNoSpecifiedTests=false`
 
 Expected: PASS, including validation and sizing assertions.
 
 - [ ] **Step 5: Commit the Bloom filter validation pass**
 
 ```bash
-git add concurrency/src/main/java/yier/bubu/concurrency/cache/BloomFilter.java \
-        concurrency/src/test/java/yier/bubu/concurrency/cache/BloomFilterTest.java
+git add redis/src/main/java/yier/bubu/redis/bloomfilter/BloomFilter.java \
+        redis/src/test/java/yier/bubu/redis/bloomfilter/BloomFilterTest.java
 git commit -m "test(concurrency): document bloom filter sizing"
 ```
 
 ### Task 3: Add the Cache-Penetration Guard Example
 
 **Files:**
-- Create: `concurrency/src/test/java/yier/bubu/concurrency/cache/ProductCatalogExistenceGuardTest.java`
-- Create: `concurrency/src/main/java/yier/bubu/concurrency/cache/ProductCatalogExistenceGuard.java`
+- Create: `redis/src/test/java/yier/bubu/redis/bloomfilter/ProductCatalogExistenceGuardTest.java`
+- Create: `redis/src/main/java/yier/bubu/redis/bloomfilter/ProductCatalogExistenceGuard.java`
 - Create: `concurrency/src/main/java/yier/bubu/concurrency/cache/package-info.java`
 
 - [ ] **Step 1: Write the failing cache-guard tests**
@@ -338,7 +338,7 @@ public class ProductCatalogExistenceGuardTest {
 
 - [ ] **Step 2: Run the cache-guard test class to verify it is red**
 
-Run: `mvn -pl concurrency -am test -Dtest=ProductCatalogExistenceGuardTest -Dsurefire.failIfNoSpecifiedTests=false`
+Run: `mvn -pl redis -am test -Dtest=ProductCatalogExistenceGuardTest -Dsurefire.failIfNoSpecifiedTests=false`
 
 Expected: test compilation fails because `ProductCatalogExistenceGuard` does not exist yet.
 
@@ -381,7 +381,7 @@ Package documentation should explain:
 
 - [ ] **Step 4: Run the cache-guard tests**
 
-Run: `mvn -pl concurrency -am test -Dtest=ProductCatalogExistenceGuardTest -Dsurefire.failIfNoSpecifiedTests=false`
+Run: `mvn -pl redis -am test -Dtest=ProductCatalogExistenceGuardTest -Dsurefire.failIfNoSpecifiedTests=false`
 
 Expected: PASS, with the chosen example data blocking at least one obviously absent product ID.
 
@@ -389,23 +389,23 @@ Expected: PASS, with the chosen example data blocking at least one obviously abs
 
 ```bash
 git add concurrency/src/main/java/yier/bubu/concurrency/cache/package-info.java \
-        concurrency/src/main/java/yier/bubu/concurrency/cache/ProductCatalogExistenceGuard.java \
-        concurrency/src/test/java/yier/bubu/concurrency/cache/ProductCatalogExistenceGuardTest.java
+        redis/src/main/java/yier/bubu/redis/bloomfilter/ProductCatalogExistenceGuard.java \
+        redis/src/test/java/yier/bubu/redis/bloomfilter/ProductCatalogExistenceGuardTest.java
 git commit -m "feat(concurrency): add bloom filter cache guard example"
 ```
 
 ### Task 4: Run Module-Level Verification
 
 **Files:**
-- Verify: `concurrency/src/main/java/yier/bubu/concurrency/cache/BloomFilter.java`
-- Verify: `concurrency/src/main/java/yier/bubu/concurrency/cache/ProductCatalogExistenceGuard.java`
+- Verify: `redis/src/main/java/yier/bubu/redis/bloomfilter/BloomFilter.java`
+- Verify: `redis/src/main/java/yier/bubu/redis/bloomfilter/ProductCatalogExistenceGuard.java`
 - Verify: `concurrency/src/main/java/yier/bubu/concurrency/cache/package-info.java`
-- Verify: `concurrency/src/test/java/yier/bubu/concurrency/cache/BloomFilterTest.java`
-- Verify: `concurrency/src/test/java/yier/bubu/concurrency/cache/ProductCatalogExistenceGuardTest.java`
+- Verify: `redis/src/test/java/yier/bubu/redis/bloomfilter/BloomFilterTest.java`
+- Verify: `redis/src/test/java/yier/bubu/redis/bloomfilter/ProductCatalogExistenceGuardTest.java`
 
 - [ ] **Step 1: Run the new cache package test classes together**
 
-Run: `mvn -pl concurrency -am test -Dtest=BloomFilterTest,ProductCatalogExistenceGuardTest -Dsurefire.failIfNoSpecifiedTests=false`
+Run: `mvn -pl redis -am test -Dtest=BloomFilterTest,ProductCatalogExistenceGuardTest -Dsurefire.failIfNoSpecifiedTests=false`
 
 Expected: PASS, both new test classes green.
 

@@ -1,4 +1,4 @@
-package yier.bubu.concurrency.cache;
+package yier.bubu.redis.bloomfilter;
 
 import org.junit.Assert;
 import org.junit.Test;

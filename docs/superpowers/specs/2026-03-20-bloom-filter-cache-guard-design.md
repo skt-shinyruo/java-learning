@@ -30,14 +30,13 @@ The implementation should stay dependency-light and fit the existing teaching-or
 
 ## Placement
 
-The implementation will live in a new package under the existing `concurrency` module:
+The implementation lives in a dedicated BloomFilter topic package inside the `redis` module:
 
-- `concurrency/src/main/java/yier/bubu/concurrency/cache`
-- `concurrency/src/test/java/yier/bubu/concurrency/cache`
+- `redis/src/main/java/yier/bubu/redis/bloomfilter`
+- `redis/src/test/java/yier/bubu/redis/bloomfilter`
 
-This is preferred over `yier.bubu.concurrency.ratelimit` because Bloom filters are not rate-limiting
-algorithms. It is preferred over `base` because this work includes a business-facing cache example,
-not just a generic utility.
+This groups the generic Bloom filter and the cache-penetration example together under the same
+topic, instead of splitting them by abstraction layer.
 
 ## Main Types
 
@@ -89,11 +88,12 @@ Design notes:
 
 ## Package Documentation
 
-Add `package-info.java` for `yier.bubu.concurrency.cache` to explain:
+Add `package-info.java` for `yier.bubu.redis.bloomfilter` to explain:
 
-- the package is about cache-facing in-memory mechanisms
-- Bloom filters answer "definitely not present" or "might be present"
-- the business example is intentionally local-memory only and for learning purposes
+- the package groups BloomFilter-related learning content
+- `BloomFilter` answers "definitely not present" or "might be present"
+- `ProductCatalogExistenceGuard` is a BloomFilter-based cache-penetration example
+- the implementation is intentionally local-memory only and for learning purposes
 
 ## Testing Strategy
 
@@ -136,8 +136,8 @@ The tests should use small, explicit ID sets so the scenario remains easy to fol
 
 ## Planned Files
 
-- `concurrency/src/main/java/yier/bubu/concurrency/cache/package-info.java`
-- `concurrency/src/main/java/yier/bubu/concurrency/cache/BloomFilter.java`
-- `concurrency/src/main/java/yier/bubu/concurrency/cache/ProductCatalogExistenceGuard.java`
-- `concurrency/src/test/java/yier/bubu/concurrency/cache/BloomFilterTest.java`
-- `concurrency/src/test/java/yier/bubu/concurrency/cache/ProductCatalogExistenceGuardTest.java`
+- `redis/src/main/java/yier/bubu/redis/bloomfilter/BloomFilter.java`
+- `redis/src/main/java/yier/bubu/redis/bloomfilter/ProductCatalogExistenceGuard.java`
+- `redis/src/main/java/yier/bubu/redis/bloomfilter/package-info.java`
+- `redis/src/test/java/yier/bubu/redis/bloomfilter/BloomFilterTest.java`
+- `redis/src/test/java/yier/bubu/redis/bloomfilter/ProductCatalogExistenceGuardTest.java`

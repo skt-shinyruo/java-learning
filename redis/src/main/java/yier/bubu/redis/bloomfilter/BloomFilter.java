@@ -1,4 +1,4 @@
-package yier.bubu.concurrency.cache;
+package yier.bubu.redis.bloomfilter;
 
 import java.util.BitSet;
 import java.util.Objects;
