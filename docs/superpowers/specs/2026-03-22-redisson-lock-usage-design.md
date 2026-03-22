@@ -68,8 +68,8 @@ The package documentation for `yier.bubu.redis.redisson` should explain:
 - the package contains learning-oriented Redisson lock examples
 - `RLock` is the default distributed lock example for ordinary mutual exclusion
 - `RFencedLock` is the recommended example when stale-owner protection matters
-- the existing `RedLock` material is retained only to explain its historical mechanism and is not the
-  recommended new production choice
+- `RedLock` is deprecated in current Redisson guidance and should be described, if mentioned at all,
+  only as historical context rather than as the recommended starting point
 
 The wording should be explicit that current production-oriented learning should start from `RLock`
 and `RFencedLock`, not from `RedLock`.
@@ -243,7 +243,7 @@ Optional broader verification after the focused tests are green:
 ## Planned Files
 
 - Modify: `redis/pom.xml`
-- Modify: `redis/src/main/java/yier/bubu/redis/redisson/package-info.java`
+- Create: `redis/src/main/java/yier/bubu/redis/redisson/package-info.java`
 - Create: `redis/src/test/java/yier/bubu/redis/redisson/LocalRedissonTestSupport.java`
 - Create: `redis/src/test/java/yier/bubu/redis/redisson/RLockIntegrationTest.java`
 - Create: `redis/src/test/java/yier/bubu/redis/redisson/RFencedLockIntegrationTest.java`
