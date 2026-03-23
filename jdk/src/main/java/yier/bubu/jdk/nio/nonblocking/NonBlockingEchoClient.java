@@ -9,6 +9,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 
+/**
+ * Demonstrates a single-request non-blocking echo client built without {@link java.nio.channels.Selector}.
+ * This package keeps the polling-based socket example separate from the selector-driven reactor example.
+ */
 public final class NonBlockingEchoClient {
     private static final long TIMEOUT_NANOS = TimeUnit.SECONDS.toNanos(5);
     private static final long PARK_NANOS = TimeUnit.MILLISECONDS.toNanos(1);

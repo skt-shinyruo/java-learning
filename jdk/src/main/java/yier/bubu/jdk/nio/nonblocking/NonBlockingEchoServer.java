@@ -13,6 +13,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
 
+/**
+ * Demonstrates a single-request non-blocking echo server built without {@link java.nio.channels.Selector}.
+ * This package isolates the polling-based socket flow from the selector-based {@code NioReactorEchoServer}.
+ */
 public final class NonBlockingEchoServer {
     private static final long TIMEOUT_NANOS = TimeUnit.SECONDS.toNanos(5);
     private static final long PARK_NANOS = TimeUnit.MILLISECONDS.toNanos(1);
@@ -29,9 +33,6 @@ public final class NonBlockingEchoServer {
             try (SocketChannel client = awaitAccepted(server, deadline)) {
                 client.configureBlocking(false);
                 String request = readLine(client, deadline);
-                if (request.isEmpty()) {
-                    throw new IllegalStateException("empty payload not supported yet");
-                }
                 writeFully(client, "ACK:" + request + "\n", deadline);
             }
         } finally {
