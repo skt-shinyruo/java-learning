@@ -1,4 +1,4 @@
-# NIO Non-Blocking Round Trip Design
+# NIO Non-Blocking Echo Client/Server Design
 
 ## Background
 
@@ -6,257 +6,275 @@ The `jdk` module already contains a more advanced NIO example:
 
 - `jdk/src/main/java/yier/bubu/jdk/nio/NioReactorEchoServer.java`
 
-That example is useful for learning `Selector`-based multiplexing and the Boss/Worker Reactor
-pattern, but it is not the right teaching artifact for someone who wants to understand the
-behavior of non-blocking network sockets themselves.
+That class is useful for learning `Selector`-based multiplexing and the Boss/Worker Reactor
+pattern, but it does not match the current teaching goal.
 
-This design adds a second NIO example focused on the lower-level semantics of:
+The current in-progress non-blocking demo also takes the wrong shape for the user's preferred
+learning style:
 
-- `ServerSocketChannel.configureBlocking(false)`
-- `SocketChannel.configureBlocking(false)`
-- non-blocking `connect()`
-- non-blocking `finishConnect()`
-- non-blocking `accept()`
-- non-blocking `read()` and `write()`
+- it combines server logic, client logic, test orchestration, and manual entry-point behavior in one
+  production class
+- it exposes a demo-style wrapper rather than clean client/server roles
 
-The goal is to show a minimal closed loop between a client and a server without introducing
-`Selector`-based multiplexing.
+This design replaces that structure with a small, dedicated package containing separate
+non-blocking server and client classes, while moving all closed-loop orchestration into JUnit tests.
 
 ## Goals
 
-- Add a minimal educational NIO example under the `jdk` module
-- Demonstrate non-blocking client and server socket behavior without using `Selector`
-- Show a full loopback round trip from client request to server response
-- Make the example executable from a single `main` method
-- Make the core behavior testable without depending on console output
-- Keep the code small enough to read in one sitting
+- Keep the example in the `jdk` module
+- Demonstrate non-blocking network I/O without using `Selector`
+- Separate server and client into independent production classes
+- Move all round-trip orchestration into tests
+- Preserve the teaching focus on non-blocking `accept`, `finishConnect`, `read`, and `write`
+- Keep the example small enough to read quickly
 
 ## Non-Goals
 
 - No `Selector`, `SelectionKey`, or Reactor abstractions
-- No attempt to build a production-ready socket framework
-- No multi-client handling
-- No general-purpose protocol framing layer
-- No thread pool, executor, or asynchronous callback API
-- No Netty-style pipeline or buffer abstractions
+- No `main` methods in the new non-blocking example classes
+- No shared support/helper class extracted just to remove a small amount of duplication
+- No multi-client server
+- No production-ready socket framework
+- No new dependencies
 
 ## Module and Package Placement
 
-The new example should live in the existing `jdk` module because it teaches JDK-level networking
-APIs rather than Netty, JVM internals, or concurrency primitives.
+The example should remain in `jdk` because it teaches raw JDK NIO networking APIs.
 
-Package:
+Create a dedicated package for this topic:
 
-- `yier.bubu.jdk.nio`
+- `yier.bubu.jdk.nio.nonblocking`
 
-Primary class:
+This keeps the example clearly separate from the existing Reactor example in:
+
+- `yier.bubu.jdk.nio.NioReactorEchoServer`
+
+and avoids mixing two different teaching goals in the same package layer.
+
+## Production Files
+
+Create:
+
+- `jdk/src/main/java/yier/bubu/jdk/nio/nonblocking/NonBlockingEchoServer.java`
+- `jdk/src/main/java/yier/bubu/jdk/nio/nonblocking/NonBlockingEchoClient.java`
+
+Delete:
 
 - `jdk/src/main/java/yier/bubu/jdk/nio/NonBlockingSocketRoundTripDemo.java`
 
-Test class:
+The old single-class demo should be removed rather than left in parallel, because it would duplicate
+the same topic with a less desirable structure.
+
+## Test Files
+
+Create:
+
+- `jdk/src/test/java/yier/bubu/jdk/nio/nonblocking/NonBlockingEchoRoundTripTest.java`
+
+Delete:
 
 - `jdk/src/test/java/yier/bubu/jdk/nio/NonBlockingSocketRoundTripDemoTest.java`
 
-`JdkApp` should remain unchanged. This example should be a separate executable entry point, matching
-the current pattern used by `NioReactorEchoServer`.
-
-## Teaching Scope
-
-This example should explicitly teach the following points:
-
-- a non-blocking server `accept()` call can return `null`
-- a non-blocking client `finishConnect()` may need to be retried
-- a non-blocking `read()` call can return `0` when no data is currently available
-- a non-blocking `write()` call may write only part of the outbound buffer
-- progress loops need timeout protection and a small backoff to avoid unbounded busy spinning
-
-This example should not hide those behaviors behind helper frameworks. The control flow should make
-the polling semantics visible to readers.
+The test should own the closed-loop behavior instead of calling a demo wrapper hidden in production
+code.
 
 ## Round-Trip Protocol
 
-The demo should use a deliberately tiny text protocol so the non-blocking socket behavior remains
-the focus.
+Use the same tiny text protocol as before so the refactor changes structure, not topic.
 
 Client request:
 
-- UTF-8 encoded payload
-- terminated by `\n`
+- UTF-8 payload
+- newline terminated
 
 Server response:
 
-- `ACK:` + payload + `\n`
+- `ACK:` + payload + newline
 
 Examples:
 
-- request `hello\n` -> response `ACK:hello\n`
-- request `\n` -> response `ACK:\n`
+- `hello\n` -> `ACK:hello\n`
+- `\n` -> `ACK:\n`
 
-The server should treat the first newline as the end of the request and respond once per connection.
+The server handles one connection and one request line per run.
+
+## Class Responsibilities
+
+### `NonBlockingEchoServer`
+
+Purpose:
+
+- own the non-blocking server-side behavior only
+
+Responsibilities:
+
+- open a `ServerSocketChannel`
+- bind to loopback on port `0`
+- switch to non-blocking mode
+- publish the chosen port to the caller
+- accept exactly one client connection
+- read exactly one newline-terminated request
+- write exactly one `ACK:` response
+- close resources and return
+
+The server class should not:
+
+- create the client
+- create its own worker thread
+- own the full end-to-end test scenario
+- expose a `main`
+
+Suggested API shape:
+
+- one public method that performs a single server run, for example `serveOnce(...)`
+
+The exact parameter list may be adjusted during planning, but it must support test-owned port
+publication and failure propagation.
+
+### `NonBlockingEchoClient`
+
+Purpose:
+
+- own the non-blocking client-side behavior only
+
+Responsibilities:
+
+- open a `SocketChannel`
+- switch to non-blocking mode
+- start a connection to a provided server address
+- poll `finishConnect()`
+- write one newline-terminated request
+- read one newline-terminated response
+- return the decoded response string without the trailing newline
+
+The client class should not:
+
+- start the server
+- own any test synchronization concerns beyond its own exchange call
+- expose a `main`
+
+Suggested API shape:
+
+- one public method such as `exchange(InetSocketAddress address, String message)`
+
+## No Shared Support Class
+
+Do not introduce a third production class such as `NonBlockingIoSupport`.
+
+If `NonBlockingEchoServer` and `NonBlockingEchoClient` each need small private helpers like:
+
+- `readLine(...)`
+- `writeFully(...)`
+- `pauseIfNeeded(...)`
+
+those helpers should stay inside their respective classes.
+
+Some duplication is acceptable here because the primary goal is clarity of each role, not maximum
+deduplication.
+
+## Non-Blocking Semantics to Show
+
+The refactor must continue to make these behaviors visible:
+
+- server `accept()` can return `null`
+- client `finishConnect()` may need retries
+- `read()` can return `0`
+- `write()` can return `0` or partial progress
+
+The code should not hide these behaviors behind a framework-like abstraction.
 
 ## Runtime Structure
 
-The demo should use two threads:
+The end-to-end round trip should be assembled in the test, not in production code.
 
-- one server thread
-- one client thread
+The test should:
 
-This is still the smallest practical closed loop for a single-process demo because a server blocked
-inside its accept/read/write progress loop cannot also drive the client in the same thread.
+- create the server object
+- create the client object
+- start the server on a dedicated thread
+- wait for the server to publish its port
+- call the client exchange method
+- join the server thread
+- rethrow any server-side failure captured from the background thread
 
-The example should avoid introducing extra coordination primitives beyond what is required to:
-
-- pass the dynamically assigned port from the server to the client
-- collect the server response for assertions
-- surface failures cleanly across threads
-
-## Server Flow
-
-The server side should:
-
-1. open a `ServerSocketChannel`
-2. bind it to the loopback interface on port `0`
-3. switch it to non-blocking mode
-4. repeatedly call `accept()` until a client channel is returned or timeout is reached
-5. switch the accepted `SocketChannel` to non-blocking mode
-6. repeatedly call `read()` until a full newline-terminated request is assembled
-7. build the response `ACK:<payload>\n`
-8. repeatedly call `write()` until the response buffer is fully sent
-9. close the accepted channel and server channel
-
-If `accept()` returns `null` or `read()`/`write()` make no progress, the loop should briefly park
-before retrying.
-
-## Client Flow
-
-The client side should:
-
-1. open a `SocketChannel`
-2. switch it to non-blocking mode
-3. start `connect()` against the server's loopback address and chosen port
-4. repeatedly call `finishConnect()` until the connection completes or timeout is reached
-5. repeatedly call `write()` until the full request line is sent
-6. repeatedly call `read()` until a newline-terminated response is assembled
-7. return the decoded response text
-8. close the channel
-
-The client flow should visibly distinguish:
-
-- not connected yet
-- connected but request not fully written
-- request sent but response not yet readable
-
-## Public Entry Points
-
-The class should expose two ways to run the example.
-
-### `main(String[] args)`
-
-Purpose:
-
-- manual execution from the command line
-
-Behavior:
-
-- use a default payload such as `hello`
-- run the closed-loop demo
-- print the request and response
-- print a short note describing which non-blocking behaviors the example is demonstrating
-
-### Package-Visible Test Hook
-
-Provide a package-visible static method:
-
-- `static String runRoundTrip(String message) throws Exception`
-
-Purpose:
-
-- allow tests to verify behavior without parsing stdout
-
-Behavior:
-
-- accept the logical payload without the trailing newline
-- execute one closed-loop request/response exchange
-- return the logical response without the trailing newline
-
-Examples:
-
-- `runRoundTrip("hello")` returns `ACK:hello`
-- `runRoundTrip("")` returns `ACK:`
+The production classes should stay usable independently of JUnit, but the closed-loop scenario
+itself belongs in the test.
 
 ## Error Handling
 
-The example should fail fast and clearly when the expected non-blocking progress does not happen.
+Both production classes should fail fast and clearly.
 
 Required rules:
 
 - every polling loop has a deadline
-- a timeout results in `IllegalStateException`
-- `read() == -1` before a full line is received is treated as premature peer close and fails
-- background thread failures are propagated back to the caller
-- all channels are closed in `finally` blocks or try-with-resources
+- timeout results in `IllegalStateException`
+- `read() == -1` before a full line is received is a failure
+- channels are closed with try-with-resources or equivalent `finally` handling
 
-This keeps the demo deterministic enough for tests and prevents hangs during local runs.
+For the server thread used in tests:
+
+- background exceptions should be captured into an `AtomicReference<Throwable>`
+- the test should fail if that reference is non-null after the thread completes
 
 ## Backoff Strategy
 
-The demo should not use a pure tight spin loop. When a non-blocking operation cannot currently make
-progress, it should pause briefly with:
+When a non-blocking operation makes no progress, each class should briefly pause with:
 
 - `LockSupport.parkNanos(...)`
 
-The backoff should be small and fixed. The purpose is not sophisticated scheduling, only preventing
-the teaching example from turning into a wasteful busy loop.
+Use a small fixed backoff only. No scheduler, executor, or adaptive retry policy is needed.
 
 ## Testing Strategy
 
-Two focused JUnit 4 tests are sufficient.
+The tests should exercise real loopback channels rather than mocks.
+
+Create one JUnit 4 test class with at least these scenarios.
 
 ### Happy Path
 
-Test:
+Test flow:
 
-- `runRoundTrip("hello")` returns `ACK:hello`
-
-Purpose:
-
-- verifies the complete request/response path across non-blocking connect, accept, write, and read
+- start the server on a background thread
+- wait for port publication
+- run the client exchange with `"hello"`
+- assert the response is `ACK:hello`
+- verify the server thread exits cleanly
 
 ### Empty Payload
 
-Test:
+Test flow:
 
-- `runRoundTrip("")` returns `ACK:`
+- start the server on a background thread
+- wait for port publication
+- run the client exchange with `""`
+- assert the response is `ACK:`
+- verify the server thread exits cleanly
 
-Purpose:
+The tests are responsible for the lifecycle of the round-trip scenario.
 
-- verifies the protocol still works when the line contains no payload before the newline
+## Documentation in Code
 
-The tests should exercise real channels on the loopback interface rather than mocks.
+The class-level Javadocs for both production classes should explain:
 
-## Documentation Inside the Code
+- these classes are part of a non-blocking socket example
+- the example intentionally avoids `Selector`
+- the package complements, rather than replaces, `NioReactorEchoServer`
 
-The class-level Javadoc should state clearly that:
-
-- this is a non-blocking socket semantics example
-- it intentionally avoids `Selector`
-- it is meant to complement, not replace, `NioReactorEchoServer`
-
-The Javadoc should also include an example command from the repository root:
-
-- `mvn -pl jdk -am -DskipTests package`
-- `java -cp jdk/target/classes yier.bubu.jdk.nio.NonBlockingSocketRoundTripDemo`
+Do not include command-line usage sections tied to `main`, because the new design intentionally has
+no `main` methods.
 
 ## Implementation Constraints
 
 - Keep the code JDK 8 compatible
-- Keep the implementation in a single production class unless a small helper type is clearly needed
-- Prefer standard JDK classes only
 - Do not modify `NioReactorEchoServer`
 - Do not add dependencies
-- Do not add a separate documentation file unless the implementation becomes too dense for comments
+- Keep helper logic private to each class instead of extracting a shared support type
+- Prefer focused classes over a single demo wrapper
 
 ## Planned Files
 
-- `jdk/src/main/java/yier/bubu/jdk/nio/NonBlockingSocketRoundTripDemo.java`
-- `jdk/src/test/java/yier/bubu/jdk/nio/NonBlockingSocketRoundTripDemoTest.java`
+- `jdk/src/main/java/yier/bubu/jdk/nio/nonblocking/NonBlockingEchoServer.java`
+- `jdk/src/main/java/yier/bubu/jdk/nio/nonblocking/NonBlockingEchoClient.java`
+- `jdk/src/test/java/yier/bubu/jdk/nio/nonblocking/NonBlockingEchoRoundTripTest.java`
+- delete `jdk/src/main/java/yier/bubu/jdk/nio/NonBlockingSocketRoundTripDemo.java`
+- delete `jdk/src/test/java/yier/bubu/jdk/nio/NonBlockingSocketRoundTripDemoTest.java`
