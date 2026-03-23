@@ -24,7 +24,8 @@ non-blocking server and client classes, while moving all closed-loop orchestrati
 - Keep the example in the `jdk` module
 - Demonstrate non-blocking network I/O without using `Selector`
 - Separate server and client into independent production classes
-- Move all round-trip orchestration into tests
+- Make the main round-trip tests easy for beginners to read
+- Keep unavoidable complexity in the non-blocking socket code itself, not in test orchestration
 - Preserve the teaching focus on non-blocking `accept`, `finishConnect`, `read`, and `write`
 - Keep the example small enough to read quickly
 
@@ -32,10 +33,10 @@ non-blocking server and client classes, while moving all closed-loop orchestrati
 
 - No `Selector`, `SelectionKey`, or Reactor abstractions
 - No `main` methods in the new non-blocking example classes
-- No shared support/helper class extracted just to remove a small amount of duplication
 - No multi-client server
 - No production-ready socket framework
 - No new dependencies
+- No test-owned port publication protocol based on `CountDownLatch` + `AtomicInteger` when a simpler API can avoid it
 
 ## Module and Package Placement
 
@@ -70,13 +71,14 @@ the same topic with a less desirable structure.
 Create:
 
 - `jdk/src/test/java/yier/bubu/jdk/nio/nonblocking/NonBlockingEchoRoundTripTest.java`
+- `jdk/src/test/java/yier/bubu/jdk/nio/nonblocking/NonBlockingEchoTimeoutTest.java`
 
 Delete:
 
 - `jdk/src/test/java/yier/bubu/jdk/nio/NonBlockingSocketRoundTripDemoTest.java`
 
-The test should own the closed-loop behavior instead of calling a demo wrapper hidden in production
-code.
+The tests should still own execution, but the production API should be shaped so the main round-trip
+tests stay straightforward and do not have to carry unnecessary synchronization noise.
 
 ## Round-Trip Protocol
 
@@ -109,9 +111,9 @@ Purpose:
 Responsibilities:
 
 - open a `ServerSocketChannel`
-- bind to loopback on port `0`
+- bind to loopback on port `0` during construction or other obvious setup
 - switch to non-blocking mode
-- publish the chosen port to the caller
+- expose the chosen port or loopback address directly to callers
 - accept exactly one client connection
 - read exactly one newline-terminated request
 - write exactly one `ACK:` response
@@ -126,10 +128,13 @@ The server class should not:
 
 Suggested API shape:
 
-- one public method that performs a single server run, for example `serveOnce(...)`
+- a simple setup shape such as:
+  - constructor binds and prepares the server
+  - `int port()` or `InetSocketAddress address()`
+  - `void serveOnce()`
 
-The exact parameter list may be adjusted during planning, but it must support test-owned port
-publication and failure propagation.
+The key design goal is that callers should not need `AtomicInteger` + `CountDownLatch` just to
+learn what port the server bound to.
 
 ### `NonBlockingEchoClient`
 
@@ -157,20 +162,24 @@ Suggested API shape:
 
 - one public method such as `exchange(InetSocketAddress address, String message)`
 
-## No Shared Support Class
+## Keep Complexity In The Right Place
 
-Do not introduce a third production class such as `NonBlockingIoSupport`.
+The complexity that should remain visible is the non-blocking socket behavior itself:
 
-If `NonBlockingEchoServer` and `NonBlockingEchoClient` each need small private helpers like:
+- `accept()` may return `null`
+- `finishConnect()` may need retries
+- `read()` may return `0`
+- `write()` may make only partial progress
 
-- `readLine(...)`
-- `writeFully(...)`
-- `pauseIfNeeded(...)`
+The complexity that should be reduced is test orchestration complexity that distracts beginners from
+that main story.
 
-those helpers should stay inside their respective classes.
+In practice, that means:
 
-Some duplication is acceptable here because the primary goal is clarity of each role, not maximum
-deduplication.
+- avoid exposing production APIs that force tests to pass around `AtomicInteger`, `CountDownLatch`,
+  or similar coordination objects just to bootstrap a simple round trip
+- keep helper methods or helper classes judged by whether they reduce reader confusion, not by
+  whether they minimize line count
 
 ## Non-Blocking Semantics to Show
 
@@ -187,18 +196,32 @@ The code should not hide these behaviors behind a framework-like abstraction.
 
 The end-to-end round trip should be assembled in the test, not in production code.
 
-The test should:
+### Main Round-Trip Tests
 
-- create the server object
-- create the client object
-- start the server on a dedicated thread
-- wait for the server to publish its port
-- call the client exchange method
-- join the server thread
-- rethrow any server-side failure captured from the background thread
+The beginner-facing tests should read like the story they are teaching:
 
-The production classes should stay usable independently of JUnit, but the closed-loop scenario
-itself belongs in the test.
+1. create server
+2. create client
+3. start server in the background
+4. client sends a message to `server.port()` or `server.address()`
+5. assert the response
+6. wait for the server to finish
+
+They should not require readers to first understand a coordination protocol built out of:
+
+- `CountDownLatch`
+- `AtomicInteger`
+- `AtomicReference<Throwable>`
+
+unless a particular test is explicitly about timeout/error behavior.
+
+### Timeout Tests
+
+Timeout-focused tests may use more scaffolding when needed, because they are checking contract
+edges rather than teaching the main request/response path.
+
+Those tests should be separated from the main round-trip tests so beginners can first read the
+simple flow and only then inspect timeout-specific machinery.
 
 ## Error Handling
 
@@ -211,10 +234,13 @@ Required rules:
 - `read() == -1` before a full line is received is a failure
 - channels are closed with try-with-resources or equivalent `finally` handling
 
-For the server thread used in tests:
+For main round-trip tests, prefer simpler exception propagation patterns such as:
 
-- background exceptions should be captured into an `AtomicReference<Throwable>`
-- the test should fail if that reference is non-null after the thread completes
+- `FutureTask`
+- `Future.get()`
+- or another straight-line mechanism
+
+instead of custom shared-state coordination when that shared state is not central to the lesson.
 
 ## Backoff Strategy
 
@@ -228,29 +254,53 @@ Use a small fixed backoff only. No scheduler, executor, or adaptive retry policy
 
 The tests should exercise real loopback channels rather than mocks.
 
-Create one JUnit 4 test class with at least these scenarios.
+Create two JUnit 4 test classes.
 
 ### Happy Path
 
+Location:
+
+- `NonBlockingEchoRoundTripTest`
+
 Test flow:
 
-- start the server on a background thread
-- wait for port publication
-- run the client exchange with `"hello"`
+- create server and client
+- start server on a background thread
+- run the client exchange with `"hello"` using the server's exposed address or port
 - assert the response is `ACK:hello`
-- verify the server thread exits cleanly
+- verify the server finishes cleanly
 
 ### Empty Payload
 
+Location:
+
+- `NonBlockingEchoRoundTripTest`
+
 Test flow:
 
-- start the server on a background thread
-- wait for port publication
+- create server and client
+- start server on a background thread
 - run the client exchange with `""`
 - assert the response is `ACK:`
-- verify the server thread exits cleanly
+- verify the server finishes cleanly
 
-The tests are responsible for the lifecycle of the round-trip scenario.
+### Timeout Contracts
+
+Location:
+
+- `NonBlockingEchoTimeoutTest`
+
+Test flow:
+
+- include a server-side timeout case
+- include a client-side timeout case
+- assert timeout paths surface `IllegalStateException`
+
+These tests may use extra test infrastructure when needed, but that infrastructure should stay out
+of the main round-trip test class.
+
+The tests are still responsible for lifecycle, but the main test class should remain easy to read
+for someone who is learning non-blocking sockets for the first time.
 
 ## Documentation in Code
 
@@ -268,13 +318,15 @@ no `main` methods.
 - Keep the code JDK 8 compatible
 - Do not modify `NioReactorEchoServer`
 - Do not add dependencies
-- Keep helper logic private to each class instead of extracting a shared support type
-- Prefer focused classes over a single demo wrapper
+- Prefer simpler, more direct APIs over test-driven coordination protocols
+- Keep the main round-trip test class beginner-friendly
+- If a timeout or failure contract needs extra scaffolding, isolate it in a dedicated timeout test class
 
 ## Planned Files
 
 - `jdk/src/main/java/yier/bubu/jdk/nio/nonblocking/NonBlockingEchoServer.java`
 - `jdk/src/main/java/yier/bubu/jdk/nio/nonblocking/NonBlockingEchoClient.java`
 - `jdk/src/test/java/yier/bubu/jdk/nio/nonblocking/NonBlockingEchoRoundTripTest.java`
+- `jdk/src/test/java/yier/bubu/jdk/nio/nonblocking/NonBlockingEchoTimeoutTest.java`
 - delete `jdk/src/main/java/yier/bubu/jdk/nio/NonBlockingSocketRoundTripDemo.java`
 - delete `jdk/src/test/java/yier/bubu/jdk/nio/NonBlockingSocketRoundTripDemoTest.java`
