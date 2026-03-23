@@ -33,6 +33,26 @@ public class NonBlockingEchoRoundTripTest {
         }
     }
 
+    @Test
+    public void exchange_shouldAckEmptyPayload() throws Exception {
+        AtomicInteger portRef = new AtomicInteger(-1);
+        CountDownLatch portReady = new CountDownLatch(1);
+        AtomicReference<Throwable> failureRef = new AtomicReference<>();
+
+        NonBlockingEchoServer server = new NonBlockingEchoServer();
+        NonBlockingEchoClient client = new NonBlockingEchoClient();
+
+        Thread serverThread = startServer(server, portRef, portReady, failureRef);
+        try {
+            awaitPort(portReady, portRef);
+            String response = client.exchange(loopback(portRef.get()), "");
+            Assert.assertEquals("ACK:", response);
+            awaitServerExit(serverThread, failureRef);
+        } finally {
+            serverThread.join(TIMEOUT_MILLIS);
+        }
+    }
+
     private static Thread startServer(NonBlockingEchoServer server,
                                       AtomicInteger portRef,
                                       CountDownLatch portReady,
