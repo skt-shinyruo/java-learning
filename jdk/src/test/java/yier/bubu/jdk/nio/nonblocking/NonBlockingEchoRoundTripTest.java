@@ -53,6 +53,26 @@ public class NonBlockingEchoRoundTripTest {
         }
     }
 
+    @Test
+    public void serveOnce_shouldSurfaceIllegalStateExceptionWhenAcceptTimesOut() throws Exception {
+        AtomicInteger portRef = new AtomicInteger(-1);
+        CountDownLatch portReady = new CountDownLatch(1);
+        AtomicReference<Throwable> failureRef = new AtomicReference<>();
+
+        NonBlockingEchoServer server = new NonBlockingEchoServer();
+
+        Thread serverThread = startServer(server, portRef, portReady, failureRef);
+        try {
+            awaitPort(portReady, portRef);
+            Throwable failure = awaitServerFailure(serverThread, failureRef);
+            Assert.assertTrue("timeout should surface as IllegalStateException but was " + failure,
+                    failure instanceof IllegalStateException);
+            Assert.assertEquals("timed out waiting to accept a client", failure.getMessage());
+        } finally {
+            serverThread.join(TIMEOUT_MILLIS);
+        }
+    }
+
     private static Thread startServer(NonBlockingEchoServer server,
                                       AtomicInteger portRef,
                                       CountDownLatch portReady,
@@ -74,8 +94,7 @@ public class NonBlockingEchoRoundTripTest {
     }
 
     private static void awaitServerExit(Thread serverThread, AtomicReference<Throwable> failureRef) throws Exception {
-        serverThread.join(TIMEOUT_MILLIS);
-        Assert.assertFalse("server thread should exit", serverThread.isAlive());
+        awaitServerStopped(serverThread);
         Throwable failure = failureRef.get();
         if (failure == null) {
             return;
@@ -87,6 +106,19 @@ public class NonBlockingEchoRoundTripTest {
             throw (Error) failure;
         }
         throw new RuntimeException(failure);
+    }
+
+    private static Throwable awaitServerFailure(Thread serverThread, AtomicReference<Throwable> failureRef)
+            throws InterruptedException {
+        awaitServerStopped(serverThread);
+        Throwable failure = failureRef.get();
+        Assert.assertNotNull("server thread should fail", failure);
+        return failure;
+    }
+
+    private static void awaitServerStopped(Thread serverThread) throws InterruptedException {
+        serverThread.join(TIMEOUT_MILLIS);
+        Assert.assertFalse("server thread should exit", serverThread.isAlive());
     }
 
     private static InetSocketAddress loopback(int port) throws Exception {

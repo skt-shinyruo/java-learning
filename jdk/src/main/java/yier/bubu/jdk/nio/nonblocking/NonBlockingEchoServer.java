@@ -86,10 +86,10 @@ public final class NonBlockingEchoServer {
         }
     }
 
-    private void pauseIfNeeded(long deadline, String action) throws IOException {
+    private void pauseIfNeeded(long deadline, String action) {
         long remaining = deadline - System.nanoTime();
         if (remaining <= 0L) {
-            throw new IOException("timed out waiting to " + action);
+            throw new IllegalStateException("timed out waiting to " + action);
         }
         LockSupport.parkNanos(Math.min(PARK_NANOS, remaining));
     }
