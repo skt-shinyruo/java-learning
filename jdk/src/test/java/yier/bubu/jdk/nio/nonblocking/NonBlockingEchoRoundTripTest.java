@@ -5,6 +5,8 @@ import org.junit.Test;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -73,6 +75,33 @@ public class NonBlockingEchoRoundTripTest {
         }
     }
 
+    @Test
+    public void exchange_shouldSurfaceIllegalStateExceptionWhenClientReadTimesOut() throws Exception {
+        AtomicInteger portRef = new AtomicInteger(-1);
+        CountDownLatch portReady = new CountDownLatch(1);
+        CountDownLatch clientAccepted = new CountDownLatch(1);
+        CountDownLatch releaseServer = new CountDownLatch(1);
+        AtomicReference<Throwable> failureRef = new AtomicReference<>();
+
+        NonBlockingEchoClient client = new NonBlockingEchoClient(TimeUnit.MILLISECONDS.toNanos(50L));
+
+        Thread serverThread = startSilentServer(portRef, portReady, clientAccepted, releaseServer, failureRef);
+        try {
+            awaitPort(portReady, portRef);
+            try {
+                client.exchange(loopback(portRef.get()), "hello");
+                Assert.fail("client should time out while waiting for a response");
+            } catch (IllegalStateException expected) {
+                Assert.assertEquals("timed out waiting to read a response line", expected.getMessage());
+            }
+            Assert.assertTrue("silent server should accept the client",
+                    clientAccepted.await(TIMEOUT_MILLIS, TimeUnit.MILLISECONDS));
+        } finally {
+            releaseServer.countDown();
+            awaitServerExit(serverThread, failureRef);
+        }
+    }
+
     private static Thread startServer(NonBlockingEchoServer server,
                                       AtomicInteger portRef,
                                       CountDownLatch portReady,
@@ -84,6 +113,33 @@ public class NonBlockingEchoRoundTripTest {
                 failureRef.compareAndSet(null, t);
             }
         }, "nonblocking-echo-server");
+        thread.start();
+        return thread;
+    }
+
+    private static Thread startSilentServer(AtomicInteger portRef,
+                                            CountDownLatch portReady,
+                                            CountDownLatch clientAccepted,
+                                            CountDownLatch releaseServer,
+                                            AtomicReference<Throwable> failureRef) {
+        Thread thread = new Thread(() -> {
+            try (ServerSocket server = new ServerSocket()) {
+                server.bind(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0));
+                portRef.set(server.getLocalPort());
+                portReady.countDown();
+
+                try (Socket ignored = server.accept()) {
+                    clientAccepted.countDown();
+                    Assert.assertTrue("test should release silent server",
+                            releaseServer.await(TIMEOUT_MILLIS, TimeUnit.MILLISECONDS));
+                }
+            } catch (Throwable t) {
+                failureRef.compareAndSet(null, t);
+            } finally {
+                portReady.countDown();
+                releaseServer.countDown();
+            }
+        }, "nonblocking-echo-silent-server");
         thread.start();
         return thread;
     }

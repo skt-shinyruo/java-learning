@@ -17,13 +17,22 @@ public final class NonBlockingEchoClient {
     private static final long TIMEOUT_NANOS = TimeUnit.SECONDS.toNanos(5);
     private static final long PARK_NANOS = TimeUnit.MILLISECONDS.toNanos(1);
     private static final int READ_BUFFER_SIZE = 4;
+    private final long timeoutNanos;
+
+    public NonBlockingEchoClient() {
+        this(TIMEOUT_NANOS);
+    }
+
+    NonBlockingEchoClient(long timeoutNanos) {
+        this.timeoutNanos = timeoutNanos;
+    }
 
     public String exchange(InetSocketAddress address, String message) throws Exception {
         try (SocketChannel channel = SocketChannel.open()) {
             channel.configureBlocking(false);
             channel.connect(address);
 
-            long deadline = System.nanoTime() + TIMEOUT_NANOS;
+            long deadline = System.nanoTime() + timeoutNanos;
             awaitConnected(channel, deadline);
             writeFully(channel, message + "\n", deadline);
             return readLine(channel, deadline);
