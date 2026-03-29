@@ -1,0 +1,390 @@
+<html>
+<head>
+<title>The Java Memory Model</title>
+<base href="http://www.cs.umd.edu/~pugh/java/memoryModel/index.html">
+<script src="http://www.google-analytics.com/urchin.js" type="text/javascript">
+</script>
+<script type="text/javascript">
+_uacct = "UA-133798-2";
+urchinTracker();
+</script>
+</head>
+<body bgcolor="#f0f0f0">
+<h1>The Java Memory Model</h1>
+
+This web page is a starting point for discussions of and information
+concerning the Java Memory Model (<a
+href="http://java.sun.com/docs/books/jls/third_edition/html/memory.html">Chapter 
+17</a> of the <a
+href="http://java.sun.com/docs/books/jls/"> Java
+Language Specification</a>). The Java Memory Model defines how threads
+interact through memory.  It used to be somewhat unclear and unnecessarily
+limiting, and so was revised.  This is a reference page for that revision.
+The official site for JSR 133 - The Java(tm) Memory Model and Thread
+Specification Revision - <a
+href="http://www.jcp.org/en/jsr/detail?id=133"> is here</a>.
+<p>
+This page is divded up into several sections:
+<ul>
+ <li> <a href="#reference">Primary reference material</a> on the memory 
+model. 
+ <li> <a href="#mailing">Pointers to the mailing list and archives</a>.
+ <li> <a href="#additional">Additional material on the memory model, 
+including information on double-checked locking</a>.
+ <li> <a href="#older">Older material</a> on the memory model, now 
+obsolete.
+ <li> <a href="#bib">Pointers to further reading material</a> from other 
+sources.
+</ul>
+
+<hr>
+
+<a name="reference">
+<h3> Reference Material </h3>
+
+These reference materials are a good starting point for anyone trying to 
+understand the memory model.  Between them, they cover most of the major 
+issues involved.
+
+<ul>
+
+<li><b> For First-Time Visitors</b>
+<ul> 
+<li> A <a href = 
+    "http://www.cs.umd.edu/~pugh/java/memoryModel/jsr-133-faq.html"> 
+    JSR-133 FAQ resource for programmers</a> is available. This is a
+    good place to start for those just becoming aware of the issues.  (February 11, 2004)
+</ul>
+<p>
+<li><b> For JVM and compiler implementors </b>
+<ul>
+<li> <a href = "http://gee.cs.oswego.edu/dl/jmm/cookbook.html"> Doug Lea's 
+JSR-133 cookbook</a>, which is a guide for compiler writers who wish to 
+implement the Java memory model.
+ <li>  Sarita Adve and Kourosh Gharachorloo wrote a tutorial on 
+memory
+  models in 1995 that remains an excellent reference and primer.
+Compaq Research Report 95/7, September 1995, 
+<a href="http://research.compaq.com/wrl/techreports/abstracts/95.7.html">95.7 
+-- Shared Memory Consistency Models: A Tutorial</a>.
+</ul>
+<p>
+<li> <b> For those wishing to understand the memory model in full </b>
+<ul>
+<li>
+<a href="http://dl.dropbox.com/u/1011627/journal.pdf">
+A journal submission </a>  about the memory model that combines Jeremy Manson's
+dissertation, the POPL paper and the CSJP paper.  For those interested
+in a thorough discussion of the memory model issues, this is the best bet.
+(October 7, 2005).
+
+<!--
+<li>  
+<a href="http://www.cs.umd.edu/users/jmanson/java/popl05.pdf">
+A paper from PoPL 2005 about the memory model. </a>  This is largely
+directed at the academic audience.  (January, 2005)
+
+<li><a
+href="http://www.cs.umd.edu/users/jmanson/java/thesis.pdf"> Jeremy Manson's
+dissertation</a>,  which is a comprehensive overview of the
+  model. (September, 2004)
+-->
+
+
+<li><a href="jsr133.pdf">The JSR-133 specification, as sent to Final
+    Approval Ballot</a>.  This is the "official
+    specification" (August 9, 2004).  It doesn't contain much in the
+    way of explanation.
+<li><a href="may-12.pdf">New presentation/description of the 
+	semantics of final fields</a>.  This is a brief description of
+	the semantics of final fields. (May 12, 2004)
+</ul>
+
+</ul>
+
+<!--
+<h3> Talk Slides </h3>
+<ul>
+<li> The slides from the June 2004 JavaOne presentation on JSR-133 are 
+<a href="http://www.cs.umd.edu/users/jmanson/java/j1_talk.ppt">here</a>.
+</ul>
+-->
+
+<hr>
+
+<a name="mailing">
+<h3>Mailing list</h3>
+<ul>
+<li>
+	To join the Java memory model mailing list, visit <a href =
+	"http://mailman.cs.umd.edu/mailman/listinfo/javamemorymodel-discussion">
+	this page</a>.
+<li> To post to the list,
+	email <a href="mailto:javamemorymodel-discussion@mimsy.cs.umd.edu">javamemorymodel-discussion@mimsy.cs.umd.edu</a> (only subscribers may post
+	to the list). 
+<li>
+	The list has migrated.  To access the archive of the old list, visit
+<a href="archive/">this page</a>.  To access the archive of the new
+	list, visit <a href =
+	"http://mailman.cs.umd.edu/mailman/private/javamemorymodel-discussion/">
+	this page</a>.
+
+</ul>
+
+<hr>
+
+<a name="additional">
+<h3> Additional Information </h3>
+
+<h4>Double-Checked Locking is Broken</h4>
+
+Double-checked locking (also known as the multithreaded singleton
+pattern) is a widely employed idiom for publishing a singleton object
+to multiple threads.
+
+<ul> <li> <b>The "Double-Checked Locking is Broken" Declaration</b>
+<p><a href="DoubleCheckedLocking.html">This document</a> describes why the double-checked locking pattern is broken
+unless you use explicit memory barriers (or make assumptions about
+your processor and compiler).
+
+<li>Descriptions of double-check idiom
+<ul>
+<li><a href="http://www.cs.wustl.edu/~schmidt/editorial-3.html">Reality Check</a>, 
+	Douglas C. Schmidt, C++ Report, SIGS, Vol. 8, No. 3, March 1996. 
+<li>
+<a href="http://www.cs.wustl.edu/~schmidt/DC-Locking.ps.gz">Double-Checked Locking: 
+An Optimization Pattern for Efficiently Initializing and Accessing 
+Thread-safe Objects</a>, 
+Douglas Schmidt and Tim Harrison. 
+<em>3rd annual Pattern Languages of Program Design conference</em>, 1996
+<li><a href="http://www.javaworld.com/javaworld/javatips/jw-javatip67.html">Lazy instantiation</a>, Philip Bishop and Nigel Warren, JavaWorld Magazine 
+<li><a href="http://www.javaworld.com/javaworld/jw-04-1999/jw-04-toolbox-3.html">Programming
+Java threads in the real world, Part 7</a>, Allen Holub, 
+Javaworld Magazine, April 1999.
+</ul>
+</ul>
+
+<h4> Other information </h4>
+<ul>
+
+<!--
+<li> We presented a paper at CSJP in July of 2004; while it contains
+  much that is useful, it is largely subsumed by the journal
+  submission above.  It can be found 
+<a href = "http://www.cs.umd.edu/users/jmanson/java/testcases-csjp.pdf">
+here</a>.
+-->
+<li> <a href="CausalityTestCases.html">Causality test cases 1-20</a>
+<li> Informal notes we made about legal and illegal multithreaded patterns are available in <a href = "issues.pdf"> this document </a>.
+<li>Volatile spec compliance tests
+<ul>
+<li><a href="AtomicLong.java         ">AtomicLong.java         </a> - 
+	Tests for atomic read/writes of volatile Longs
+<li><a href="CoherenceVolatile.java  ">CoherenceVolatile.java  </a> - 
+	Tests for illegal compiler optimizations involving volatiles
+<li><a href="ReadAfterWrite.java">ReadAfterWrite.java</a> - 
+	Tests for sequential consistency of volatiles
+<li><a href="Volatiles.tar"> Here </a> is a tar file containing
+	the tests and more detail about their output.
+</ul>
+<li><a href="syncCost.html">Table of number of synchronization operations in Spec benchmarks</a>
+</ul>
+
+<hr>
+
+<a name="older">
+<h3> Older Material  (for the memory model historians among you) </h3>
+This is a list of many of the revisions that the memory model
+underwent over the course of its three years in flight.  They are mostly
+out of date.  If you are interested in the model as it stands, your best 
+bet is the reference material <a href="#reference">above</a>.
+
+<h4> Draft Proposals for the Memory Model</h4>
+<ul>
+<li> <a href = 
+"CurrentDraftSpec.pdf">
+Earlier draft spec, incorporates some minor fixes from Draft Final
+Spec.  </a> (April 23, 2004)
+
+<li><a href="ProposedFinalDraft.pdf">Proposed Final Draft for
+    JSR-133</a> (April 12, 2004)
+<li><a href="unifiedProposal">Documents about the Unified Memory Model Proposal for
+    Java, including additional test cases</a> (March 16, 2004)
+<li><a href="PostPublicReview.pdf">Update of JSR-133 Public Review Document</a>,
+	includes clarifications and minor fixes, does not incorporate
+	a new formalism. (March 16, 2004)
+<li><a href="http://www.saraswat.org">Writeup of alternative
+	formalism for the JSR-133 memory model</a> (March 16, 2004)
+<li><a href="http://jcp.org/aboutJava/communityprocess/review/jsr133/index.html">JSR-133 
+is in public review</a> (March 16, 2004)
+<li> <a href = 
+"http://www.cs.umd.edu/users/pugh/java/memoryModel/M-P/Feb-24-Experimental.pdf">
+Experimental version of MP without forbidden executions
+</a> (February 24, 2004).
+<li><a href="PublicReview.pdf">JSR-133 Public Review Document</a>
+  (February 2, 2004).
+<li> The competing models of February 6, 2004.
+<ul>
+<li><a href="http://www.cs.uiuc.edu/~sadve/jmm">SC-</a>
+<li>Manson/Pugh model:
+<ul>
+<li><a href="M-P/Feb-6.pdf">Short Informal Description of the M/P model</a>
+<li><a href="M-P/Feb-6-Proof.pdf">Proof that M/P model has certain desirable properties</a>
+<li><a href="M-P/Feb-6-Formalism.pdf">Long, formal description of the M/P model</a>
+</ul> 
+</ul>
+<li> October 17, 2003
+<ul>
+<li> <a href="October23.pdf">October 23th description of the Manson/Pugh core memory model (minor tweaks from previous version) </a>
+
+<li> <a href="Proof-3.pdf">Proof that correctly synchronized programs have sequentially consistent semantics, and that standard reordering transformations are valid</a>
+<li> <a href="CommunityReview-2.pdf">JSR-133 Community Review Document</a>
+</ul>
+<li> August 29, 2003: <a href="August29.pdf">NEW one page description of the Manson/Pugh core memory model (with a one and a half page appendix)</a>
+<li> August 8, 2003: <a href="CommunityReview.pdf">JSR-133 Community Review Document</a>
+<li> August 4, 2003: <a href="ReorderingIsLegal.pdf">Proof that reordering is legal under Manson/Pugh</a>
+<li> July 31, 2003: <a href="MansonPugh.pdf">One page description of the Manson/Pugh core memory model (with a one page appendix)</a>
+<li> The full semantics of normal fields are in <a href="newest.pdf">A New Approach to the Semantics of Multithreaded Java</a>, by Jeremy Manson and William Pugh, Revised Jan 13, 2003.
+<li> The full semantics of final fields are in <a href="newFinal.pdf">Final Field Semantics</a>, by Jeremy Manson and William Pugh, Revised April 7, 2003.
+
+<li><a href="semantics.pdf">Multithreaded semantics for Java</a>, a
+previous version of the semantics. (2001)
+
+<li>Weak Memory Orders and Object Oriented Programming,
+	draft of the abstract for an OOPSLA poster session submission
+	(<a href="weak.pdf">PDF</a>)
+	(<a href="weak.ps">PS</a>)
+
+
+<li><a href="/~pugh/java/broken.pdf">The Java Memory Model is Broken</a>
+	by <a href="/~pugh">William Pugh</a>,
+	Journal version of the following paper; cleans up
+	the paper somewhat and removes the naive fixes
+	suggested in that paper.
+	
+<li><a href="/~pugh/java/#jmm">Fixing the Java Memory Model</a>
+	by <a href="/~pugh">William Pugh</a>,
+ <a href="http://www.cs.ucsb.edu/conferences/java99">1999 ACM Java Grande</a>
+</ul>
+<h4> Talks </h4>
+<ul>
+<li> <a href="Dagstuhl.pdf">Presentation given at Dagstuhl</a> (October
+	24th, 2003)
+<li>Multithreaded semantics for Java,
+	(edited version of presentation given at MIT Sept 10th, 2000)
+	<br>	
+Slides (<a href="multithreaded.pdf">PDF</a>
+or <a href="multithreaded.ps">PS</a>) and handout (<a href="multithreadedHandout.pdf">PDF</a>
+or 
+<a href="multithreadedHandout.ps">PS</a>)
+<li><a href="JavaOneBOF">JavaOne BOF on revising the Java Thread Spec,
+    with Doug Lea (2000)</a>
+<li><a href="TS-754.pdf">JavaOne Talk, with Doug Lea (2000) </a>
+<li><a href="workshop/">OOPSLA 2000 workshop page</a>
+<li><a href="JavaOneBOF">Page for JavaOne 2000 BOF on revising the Java 
+Thread Spec</a>
+<li><a href="http://www.cs.umd.edu/~pugh/java/jmmSlides.pdf">Slides
+    from 1999 Java Grande Talk</a>
+</ul>
+
+<hr>
+
+<a name="bib">
+<h3> Additional Background Reading </h3>
+
+
+<h4> By Doug Lea </h4>
+<ul>
+<li><a href="http://gee.cs.oswego.edu/dl/cpj/jmm.html">The Java Memory 
+Model</a>, Section 2.2.7 
+of <a href="http://gee.cs.oswego.edu/dl/cpj/index.html"><em>Concurrent 
+Programming in Java, 2<sup>nd</sup> edition</em></a>, Doug Lea,
+        Addison Wesley, 1999
+<li><a href="http://gee.cs.oswego.edu/dl/html/jvms.html">Proposed revision to Section 17.4, Wait Sets and notification</a>, Doug Lea
+</ul>
+
+
+<h4>By Cenciarelli et al</h4>
+<ul>
+
+<li>
+<a href="http://www.pst.informatik.uni-muenchen.de/~reus/fssj.ps.gz">An 
+	Event-Based Structual Operational Semantics of Multi-Threaded Java</a>,
+P. Cenciarelli, A. Knapp, B. Reus, M. Wirsing, 
+In Jim Alves-Foss (Ed.) Formal Syntax and Semantics Of Java, LNCS 1523, pp. 157--200, Springer, Berlin,
+      1999. 
+
+<li><a href="ftp://ftp.informatik.uni-muenchen.de/pub/local/pst/papers/reus/java/java_semantics.ps.gz">From 
+	Sequential To Multi-Threaded Java: An Event-Based Operational Semantics</a>, 
+      P. Cenciarelli, A. Knapp, B. Reus, M. Wirsing, 
+	In Proc. 6^th Int. Conf. Algebraic Methodology and Software Technology, LNCS 1376, pp.
+      402--417. Springer Verlag. Berlin 1998. 
+
+<li><a href="ftp://ftp.informatik.uni-muenchen.de/pub/local/pst/papers/reus/java/prescient.ps.gz">Verifying 
+	a Compiler Optimization for Multi-Threaded Java</a>,
+      B. Reus, A. Knapp, P. Cenciarelli, M. Wirsing,
+	WADT Workshop 97, LNCS. 
+
+
+</ul>
+<h4>By Schuster et al.</h4>
+<ul>
+<li><a href="http://www.cs.technion.ac.il/~assaf/publications/java.ps">Java Memory Model: Precise Characterizations</a> by 
+<a href="http://www.cs.technion.ac.il/~assaf/">Assaf Schuster</a>,
+      Workshop on Java for High-Performance Computing, June 1999, Rhodes. 
+
+<li><a href="www.cs.technion.ac.il/~assaf/publications/java.ps">
+Java consistency: nonoperational characterizations for Java memory behavior</a>
+by
+Alex Gontmakher and Assaf Schuster,
+ACM Transactions on Computer Systems
+Volume 18 , No. 4 (Nov. 2000)
+Pages 333 - 386.
+
+</ul>
+<h4>On other memory models </h4>
+<ul>
+<li>
+<a href="ftp://ftp.capsl.udel.edu/pub/doc/memos/memo016.ps.gz">CAPSL Technical Memo 16:</a> (148K gzipped Postscript),
+<b>"Location Consistency -- a new Memory Model and Cache Consistency Protocol,"</b>
+<i>Guang R. Gao, Vivek Sarkar,</i>
+February 16, 1998.
+<li><a href="http://www.research.digital.com/SRC/tla/">TLA and TLA+</a>, Lamport et al.
+</ul>
+
+
+<h4>By Arvind et al.</h4>
+<ul>
+<li><a href="ftp://csg-ftp.lcs.mit.edu/pub/papers/csgmemo/memo-428.ps">Improving the Java Memory Model Using CRF</a>, Jan-Willem Maessen, Arvind, and Xiaowei Shen, OOPSLA 2000
+<li><a href="http://citeseer.nj.nec.com/356398.html">
+Commit-Reconcile and Fences (CRF): A New Memory Model for Architects and Compiler
+      Writers</a>, Xiaowei Shen, Arvind and Larry Rudolph, December 1998, To appear in proceedings of the
+      26th International Symposium on Computer Architecture, May 1999, Atlanta, Georgia., (14 pages).
+<li><a href="http://citeseer.nj.nec.com/364438.html"> Improving the Java Memory Model Using CRF</a>, Jan-Willem Maessen, Arvind, and Xiaowei Shen, OOPSLA 2000
+</ul>
+<h4>By others</h4>
+<ul>
+<li><a href="../readsKillImpact.html">Preliminary examination of the impact of "reads kill"</a> by 
+<a href="http://www.research.digital.com/wrl/people/scales/bio.html">Dan
+Scales</a>, Digital Western Research Laboratories
+<li><a href="http://developer.java.sun.com/developer/bugParade/bugs/4242244.html">Javasoft Bug # 4242244</a>:  JLS requires Coherence, Sun's JIT doesn't
+	provide it.
+
+<li><a href="http://www.eecis.udel.edu/~wallace/javaconc.ps">Investigating
+	Java concurrency using Abstract State Machines</a>,
+	Yuri Gurevich, Wolfram Schulte
+	and <a href="http://www.eecis.udel.edu/~wallace">Charles Wallace</a>
+</ul>
+
+
+<hr>
+<address>
+This page maintained by
+<a href="/~pugh">William Pugh</a>.
+This material is based upon work supported by the National Science Foundation under Grant No. 0098162. Any opinions, findings, and conclusions or recommendations expressed in this material are those of the author(s) and do not necessarily reflect the views of the National Science Foundation.
+</address>
+
+
+</body>
+</html>
+
