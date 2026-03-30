@@ -10,6 +10,8 @@
 - `sleep()` 和 `wait()` 的区别
 - 面试可直接复述的总结版本
 
+如果你想先从 JMM 的原子性 / 可见性 / 有序性、`happens-before`、`volatile` / `final` / `synchronized` 对比以及 `CAS/AQS/ConcurrentHashMap` 的整体关系开始，再落到 monitor 与字节码细节，可以先读 [jmm-notes.md](./jmm-notes.md)。
+
 如果你想专门看 `wait/notify/notifyAll` 的时序图、`wait set`、`AbcPrinters` 示例和常见误区，可以再结合阅读 [wait-notify.md](./wait-notify.md)。
 
 ---
