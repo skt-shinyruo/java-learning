@@ -1,0 +1,56 @@
+site_name: Java Learning Docs
+site_dir: target/mkdocs
+docs_dir: docs-site
+strict: true
+
+theme:
+  name: mkdocs
+
+nav:
+  - Home: index.md
+  - Concurrency:
+      - Overview: concurrency/index.md
+      - JMM Notes: concurrency/content/jmm-notes.md
+      - Volatile and JMM: concurrency/content/volatile-jmm.md
+      - CAS Notes: concurrency/content/cas-notes.md
+      - Synchronized Notes: concurrency/content/synchronized-notes.md
+      - Wait / Notify: concurrency/content/wait-notify.md
+      - LockSupport: concurrency/content/lock-support.md
+      - Virtual Threads: concurrency/content/virtual-threads.md
+      - JMM References:
+          - JSR-133 FAQ: concurrency/content/references/jmm/jsr-133-faq.md
+          - JSR-133 Final Release: concurrency/content/references/jmm/jsr-133-final-release.md
+          - JSR 133 Formalization: concurrency/content/references/jmm/jsr133.md
+          - Java Memory Model Reference Page: concurrency/content/references/jmm/java-memory-model-reference-page.md
+          - Double-Checked Locking Is Broken: concurrency/content/references/jmm/double-checked-locking-is-broken.md
+  - Redis:
+      - Overview: redis/index.md
+      - HyperLogLog: redis/content/hyperloglog.md
+      - ListPack: redis/content/listpack.md
+      - Redisson Watchdog: redis/content/redisson-watchdog.md
+  - JDK:
+      - Overview: jdk/index.md
+      - HashMap: jdk/content/hashmap.md
+  - JVM:
+      - Overview: jvm/index.md
+      - JVM Memory: jvm/content/jvm-memory.md
+  - Project Docs:
+      - Overview: project-docs/index.md
+      - Plans:
+          - Git Ignore Cleanup Design: project-docs/content/plans/2026-03-05-gitignore-design.md
+          - Git Ignore Cleanup Plan: project-docs/content/plans/2026-03-05-gitignore.md
+      - Superpowers Specs:
+          - Bloom Filter Cache Guard Design: project-docs/content/superpowers/specs/2026-03-20-bloom-filter-cache-guard-design.md
+          - HyperLogLog Daily Active User Counter Design: project-docs/content/superpowers/specs/2026-03-21-hyperloglog-daily-active-user-counter-design.md
+          - HyperLogLog Design: project-docs/content/superpowers/specs/2026-03-21-hyperloglog-design.md
+          - Redis Module Design: project-docs/content/superpowers/specs/2026-03-21-redis-module-design.md
+          - Redisson Lock Usage Design: project-docs/content/superpowers/specs/2026-03-22-redisson-lock-usage-design.md
+          - NIO Non-Blocking Echo Client/Server Design: project-docs/content/superpowers/specs/2026-03-23-nio-non-blocking-round-trip-design.md
+          - MkDocs Aggregated Docs Site Design: project-docs/content/superpowers/specs/2026-03-30-mkdocs-docs-site-design.md
+      - Superpowers Plans:
+          - Bloom Filter Cache Guard Implementation: project-docs/content/superpowers/plans/2026-03-20-bloom-filter-cache-guard.md
+          - HyperLogLog Daily Active User Counter Implementation: project-docs/content/superpowers/plans/2026-03-21-hyperloglog-daily-active-user-counter.md
+          - HyperLogLog Implementation: project-docs/content/superpowers/plans/2026-03-21-hyperloglog-implementation.md
+          - Redis Module Implementation: project-docs/content/superpowers/plans/2026-03-21-redis-module-implementation.md
+          - NIO Non-Blocking Echo Client/Server Simplification: project-docs/content/superpowers/plans/2026-03-23-nio-non-blocking-round-trip-implementation.md
+          - MkDocs Aggregated Docs Site Implementation: project-docs/content/superpowers/plans/2026-03-30-mkdocs-docs-site-implementation.md
