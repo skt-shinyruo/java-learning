@@ -4,7 +4,35 @@ docs_dir: docs-site
 strict: true
 
 theme:
-  name: mkdocs
+  name: material
+  language: zh
+  features:
+    - header.autohide
+    - navigation.top
+    - navigation.tracking
+    - toc.follow
+    - search.highlight
+    - search.share
+    - search.suggest
+    - content.code.copy
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: light blue
+      accent: deep purple
+      toggle:
+        icon: material/weather-night
+        name: 切换到深色模式
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: cyan
+      accent: deep purple
+      toggle:
+        icon: material/weather-sunny
+        name: 切换到浅色模式
+  font:
+    text: Roboto Slab
+    code: Roboto Mono
 
 nav:
   - Home: index.md
