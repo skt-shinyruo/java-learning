@@ -44,6 +44,7 @@ nav:
       - Synchronized Notes: concurrency/content/synchronized-notes.md
       - Wait / Notify: concurrency/content/wait-notify.md
       - LockSupport: concurrency/content/lock-support.md
+      - ThreadLocal: concurrency/content/thread-local.md
       - Virtual Threads: concurrency/content/virtual-threads.md
       - JMM References:
           - JSR-133 FAQ: concurrency/content/references/jmm/jsr-133-faq.md
@@ -58,6 +59,7 @@ nav:
       - Redisson Watchdog: redis/content/redisson-watchdog.md
   - JDK:
       - Overview: jdk/index.md
+      - Array Basics: jdk/content/array-basics.md
       - HashMap: jdk/content/hashmap.md
   - JVM:
       - Overview: jvm/index.md

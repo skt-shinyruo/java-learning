@@ -10,7 +10,8 @@ This section groups the Java concurrency notes under `concurrency/docs`.
 4. [Synchronized Notes](content/synchronized-notes.md)
 5. [Wait / Notify](content/wait-notify.md)
 6. [LockSupport](content/lock-support.md)
-7. [Virtual Threads](content/virtual-threads.md)
+7. [ThreadLocal](content/thread-local.md)
+8. [Virtual Threads](content/virtual-threads.md)
 
 ## Reference Material
 
