@@ -64,6 +64,7 @@ nav:
   - JVM:
       - Overview: jvm/index.md
       - JVM Memory: jvm/content/jvm-memory.md
+      - Java Object Layout（对象布局）: jvm/content/java-object-layout.md
       - Object Padding: jvm/content/object-padding.md
   - Project Docs:
       - Overview: project-docs/index.md

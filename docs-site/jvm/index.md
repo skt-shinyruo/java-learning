@@ -5,6 +5,7 @@ This section groups the JVM-oriented notes under `jvm/docs`.
 ## Topics
 
 - [JVM Memory](content/jvm-memory.md)
+- [Java Object Layout（对象布局）](content/java-object-layout.md)
 - [Object Padding（对象对齐填充）](content/object-padding.md)
 
 ## Notes
