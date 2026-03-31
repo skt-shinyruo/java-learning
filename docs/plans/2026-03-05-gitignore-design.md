@@ -1,32 +1,43 @@
-# .gitignore for `java-learning` (Design)
+# Git Ignore Cleanup Design
 
-**Goal:** Prevent build/IDE artifacts from being committed to Git, and clean already-tracked Maven build outputs (e.g. `**/target/**`) from the repository index.
+**Status:** Draft
+
+**Goal:** Keep repository working trees clean by ignoring build output, IDE metadata, OS junk files, and local tooling directories—without hiding source artifacts.
+
+---
 
 ## Context
 
-- Repository: `E:\\code\\java\\java-learning`
-- Build: multi-module Maven project (`packaging=pom`) with modules:
-  - `base`
-  - `jdk`
-  - `netty`
-  - `concurrency`
-- Current Git state shows compiled outputs under `**/target/**` are tracked and changing (e.g. `*.class` files), and IntelliJ project files under `.idea/` are present locally.
+This repository contains multiple Java/Maven modules and a repository-level MkDocs site. We want `.gitignore` to:
 
-## Requirements
+- Prevent accidental commits of generated output (e.g., `target/`, logs).
+- Reduce noise from IDE/editor metadata (IntelliJ, VS Code, Eclipse).
+- Keep agent/tool scratch directories out of version control.
 
-1. Ignore Maven build output across all modules (`target/` directories).
-2. Ignore IntelliJ IDEA metadata (`.idea/`, `*.iml`, etc.).
-3. Keep source code and `pom.xml` files tracked.
-4. Remove already-tracked build artifacts from the Git index so they stop appearing in `git status` and won’t be committed again.
+## Design Principles
 
-## Approach
+- Prefer ignoring **directories** for generated outputs (stable and low-maintenance).
+- Keep rules **sectioned and documented** by tool/type.
+- Avoid ignoring source-like extensions broadly unless they are **known build artifacts**.
+- Keep MkDocs build output under `target/mkdocs` so it is covered by the existing `target/` ignore rule.
 
-1. Add a single repository-root `.gitignore` covering:
-   - Maven build outputs (`target/`, `*.class`)
-   - IntelliJ IDEA files (`.idea/`, `*.iml`, etc.)
-   - Common IDE / OS noise (Eclipse, VS Code, `.DS_Store`, `Thumbs.db`)
-2. Clean existing tracked build artifacts without deleting local files by running:
-   - `git rm -r --cached base/target jdk/target netty/target concurrency/target`
-3. Verify:
-   - `git status -sb` no longer reports changes under `**/target/**`
-   - `.idea/` is ignored (no longer shows as untracked)
+## Proposed Organization (Root `.gitignore`)
+
+- Java / Maven: `target/` and Maven release backups
+- Java artifacts: `*.class`, archives, crash logs
+- IDEs: IntelliJ / Eclipse / VS Code
+- Editors: swap/backup files
+- OS: `.DS_Store`, `Thumbs.db`
+- Tools: local agent directories (e.g., `.codex`, `.serena/`, `.worktrees/`)
+
+## Risks / Tradeoffs
+
+- **Over-ignoring** could hide useful diagnostics or local scripts.
+  - Mitigation: keep ignores scoped to well-known generated outputs and tool metadata.
+
+## Rollout
+
+1. Apply `.gitignore` cleanup in a single change.
+2. Verify with `git status` that generated output is not staged/tracked.
+3. Run `mkdocs build` and ensure output remains under ignored paths (`target/mkdocs`).
+
