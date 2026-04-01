@@ -4,6 +4,7 @@ This section groups the Redis-oriented notes under `redis/docs`.
 
 ## Topics
 
+- [GeoHash](content/geohash.md)
 - [HyperLogLog](content/hyperloglog.md)
 - [ListPack](content/listpack.md)
 - [Redisson Watchdog](content/redisson-watchdog.md)

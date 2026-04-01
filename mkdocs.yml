@@ -34,14 +34,26 @@ theme:
     text: Roboto Slab
     code: Roboto Mono
 
+extra_css:
+  - stylesheets/extra.css
+
+markdown_extensions:
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
 nav:
   - Home: index.md
   - Concurrency:
       - Overview: concurrency/index.md
       - JMM Notes: concurrency/content/jmm-notes.md
+      - Thread Creation and Start: concurrency/content/thread-creation.md
       - Volatile and JMM: concurrency/content/volatile-jmm.md
       - CAS Notes: concurrency/content/cas-notes.md
       - Synchronized Notes: concurrency/content/synchronized-notes.md
+      - Thread States: concurrency/content/thread-states.md
       - Wait / Notify: concurrency/content/wait-notify.md
       - LockSupport: concurrency/content/lock-support.md
       - ThreadLocal: concurrency/content/thread-local.md
@@ -54,6 +66,7 @@ nav:
           - Double-Checked Locking Is Broken: concurrency/content/references/jmm/double-checked-locking-is-broken.md
   - Redis:
       - Overview: redis/index.md
+      - GeoHash: redis/content/geohash.md
       - HyperLogLog: redis/content/hyperloglog.md
       - ListPack: redis/content/listpack.md
       - Redisson Watchdog: redis/content/redisson-watchdog.md

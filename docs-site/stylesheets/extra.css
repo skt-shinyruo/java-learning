@@ -1,0 +1,17 @@
+.md-header {
+  background-color: var(--md-default-bg-color);
+  color: var(--md-default-fg-color);
+}
+
+.md-header--shadow {
+  box-shadow: none;
+}
+
+.md-search__form {
+  background-color: var(--md-code-bg-color);
+}
+
+.md-search__input,
+.md-search__input::placeholder {
+  color: var(--md-default-fg-color);
+}
