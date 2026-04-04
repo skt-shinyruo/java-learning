@@ -96,4 +96,19 @@ public class StateMachineTest {
             Assert.assertTrue(ex.getMessage().contains("At least one transition"));
         }
     }
+
+    @Test
+    public void build_shouldSnapshotTransitions() {
+        StateMachineBuilder<SampleState, SampleEvent, SampleContext> builder =
+                new StateMachineBuilder<SampleState, SampleEvent, SampleContext>()
+                        .addTransition(SampleState.CREATED, SampleEvent.PAY, SampleState.PAID);
+        StateMachine<SampleState, SampleEvent, SampleContext> machine = builder.build();
+
+        builder.addTransition(SampleState.CREATED, SampleEvent.CANCEL, SampleState.CANCELLED);
+        StateMachine<SampleState, SampleEvent, SampleContext> updatedMachine = builder.build();
+        SampleContext context = new SampleContext();
+
+        Assert.assertFalse(machine.canFire(SampleState.CREATED, SampleEvent.CANCEL, context));
+        Assert.assertTrue(updatedMachine.canFire(SampleState.CREATED, SampleEvent.CANCEL, context));
+    }
 }
