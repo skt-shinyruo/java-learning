@@ -32,7 +32,15 @@ public final class StateMachine<S extends Enum<S>, E extends Enum<E>, C> {
         TransitionContext<S, E, C> transitionContext =
                 new TransitionContext<S, E, C>(sourceState, definition.getTargetState(), event, context);
 
-        if (definition.getGuard() != null && !definition.getGuard().test(transitionContext)) {
+        final boolean guardPassed;
+        try {
+            guardPassed = evaluateGuard(definition, transitionContext);
+        } catch (IllegalStateException exception) {
+            notifyError(transitionContext, exception, exception);
+            throw exception;
+        }
+
+        if (!guardPassed) {
             // 守卫失败代表业务条件不满足，返回拒绝结果即可，不把它当作系统异常。
             notifyRejected(
                     sourceState,
@@ -54,16 +62,19 @@ public final class StateMachine<S extends Enum<S>, E extends Enum<E>, C> {
             }
         } catch (RuntimeException exception) {
             // 动作抛异常说明迁移执行过程出错，需要把异常抛给上层决定是否回滚或告警。
-            RuntimeException wrapped = new IllegalStateException(
-                    "Failed to execute transition action: sourceState=" + sourceState
-                            + ", targetState=" + definition.getTargetState()
-                            + ", event=" + event,
+            RuntimeException wrapped = wrapTransitionFailure(
+                    "Failed to execute transition action",
+                    transitionContext,
                     exception);
             notifyError(transitionContext, wrapped, wrapped);
             throw wrapped;
         }
 
-        notifySuccess(transitionContext);
+        try {
+            notifySuccess(transitionContext);
+        } catch (RuntimeException exception) {
+            notifyError(transitionContext, exception, exception);
+        }
         return TransitionResult.success(sourceState, definition.getTargetState(), event, context);
     }
 
@@ -80,7 +91,7 @@ public final class StateMachine<S extends Enum<S>, E extends Enum<E>, C> {
 
         TransitionContext<S, E, C> transitionContext =
                 new TransitionContext<S, E, C>(sourceState, definition.getTargetState(), event, context);
-        return definition.getGuard().test(transitionContext);
+        return evaluateGuard(definition, transitionContext);
     }
 
     private void validateInputs(S sourceState, E event) {
@@ -94,6 +105,21 @@ public final class StateMachine<S extends Enum<S>, E extends Enum<E>, C> {
             return null;
         }
         return byEvent.get(event);
+    }
+
+    private boolean evaluateGuard(TransitionDefinition<S, E, C> definition,
+                                  TransitionContext<S, E, C> transitionContext) {
+        if (definition.getGuard() == null) {
+            return true;
+        }
+        try {
+            return definition.getGuard().test(transitionContext);
+        } catch (RuntimeException exception) {
+            throw wrapTransitionFailure(
+                    "Failed to evaluate transition guard",
+                    transitionContext,
+                    exception);
+        }
     }
 
     private void notifySuccess(TransitionContext<S, E, C> transitionContext) {
@@ -144,8 +170,32 @@ public final class StateMachine<S extends Enum<S>, E extends Enum<E>, C> {
                                                       S targetState,
                                                       E event,
                                                       RuntimeException exception) {
+        return wrapTransitionFailure(
+                "Listener failed during " + phase + " notification",
+                sourceState,
+                targetState,
+                event,
+                exception);
+    }
+
+    private IllegalStateException wrapTransitionFailure(String message,
+                                                        TransitionContext<S, E, C> transitionContext,
+                                                        RuntimeException exception) {
+        return wrapTransitionFailure(
+                message,
+                transitionContext.getSourceState(),
+                transitionContext.getTargetState(),
+                transitionContext.getEvent(),
+                exception);
+    }
+
+    private IllegalStateException wrapTransitionFailure(String message,
+                                                        S sourceState,
+                                                        S targetState,
+                                                        E event,
+                                                        RuntimeException exception) {
         return new IllegalStateException(
-                "Listener failed during " + phase + " notification: sourceState=" + sourceState
+                message + ": sourceState=" + sourceState
                         + ", targetState=" + targetState
                         + ", event=" + event,
                 exception);
