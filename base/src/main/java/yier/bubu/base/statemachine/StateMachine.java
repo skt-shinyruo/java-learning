@@ -70,10 +70,9 @@ public final class StateMachine<S extends Enum<S>, E extends Enum<E>, C> {
             throw wrapped;
         }
 
-        try {
-            notifySuccess(transitionContext);
-        } catch (RuntimeException exception) {
-            notifyError(transitionContext, exception, exception);
+        RuntimeException successFailure = notifySuccess(transitionContext);
+        if (successFailure != null) {
+            notifyError(transitionContext, successFailure, successFailure);
         }
         return TransitionResult.success(sourceState, definition.getTargetState(), event, context);
     }
@@ -122,19 +121,26 @@ public final class StateMachine<S extends Enum<S>, E extends Enum<E>, C> {
         }
     }
 
-    private void notifySuccess(TransitionContext<S, E, C> transitionContext) {
+    private RuntimeException notifySuccess(TransitionContext<S, E, C> transitionContext) {
+        RuntimeException primaryFailure = null;
         for (StateMachineListener<S, E, C> listener : listeners) {
             try {
                 listener.onSuccess(transitionContext);
             } catch (RuntimeException exception) {
-                throw wrapListenerFailure(
+                RuntimeException wrapped = wrapListenerFailure(
                         "success",
                         transitionContext.getSourceState(),
                         transitionContext.getTargetState(),
                         transitionContext.getEvent(),
                         exception);
+                if (primaryFailure == null) {
+                    primaryFailure = wrapped;
+                } else {
+                    primaryFailure.addSuppressed(wrapped);
+                }
             }
         }
+        return primaryFailure;
     }
 
     private void notifyRejected(S sourceState, S targetState, E event, C context, RejectionReason rejectionReason) {

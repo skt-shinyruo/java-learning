@@ -404,7 +404,7 @@ public class StateMachineTest {
     }
 
     @Test
-    public void fire_shouldReturnSuccessWhenSuccessListenerFailsAndNotifyErrorListener() {
+    public void fire_shouldContinueSuccessListenersAfterFailureAndNotifyErrorListener() {
         final RuntimeException[] observed = {null};
         StateMachine<SampleState, SampleEvent, SampleContext> machine =
                 new StateMachineBuilder<SampleState, SampleEvent, SampleContext>()
@@ -418,7 +418,15 @@ public class StateMachineTest {
                             @Override
                             public void onSuccess(
                                     TransitionContext<SampleState, SampleEvent, SampleContext> transitionContext) {
+                                transitionContext.getContext().getAuditLogs().add("first");
                                 throw new IllegalStateException("listener failure");
+                            }
+                        })
+                        .addListener(new StateMachineListener<SampleState, SampleEvent, SampleContext>() {
+                            @Override
+                            public void onSuccess(
+                                    TransitionContext<SampleState, SampleEvent, SampleContext> transitionContext) {
+                                transitionContext.getContext().getAuditLogs().add("second");
                             }
                         })
                         .addListener(new StateMachineListener<SampleState, SampleEvent, SampleContext>() {
@@ -437,12 +445,65 @@ public class StateMachineTest {
 
         Assert.assertTrue(result.isSuccess());
         Assert.assertTrue(context.isPaid());
+        Assert.assertEquals(Arrays.asList("first", "second"), context.getAuditLogs());
         Assert.assertNotNull(observed[0]);
         Assert.assertTrue(observed[0].getMessage().contains("sourceState=CREATED"));
         Assert.assertTrue(observed[0].getMessage().contains("targetState=PAID"));
         Assert.assertTrue(observed[0].getMessage().contains("event=PAY"));
         Assert.assertTrue(observed[0].getCause() instanceof IllegalStateException);
         Assert.assertEquals("listener failure", observed[0].getCause().getMessage());
+    }
+
+    @Test
+    public void fire_shouldAggregateMultipleSuccessListenerFailuresBeforeNotifyingError() {
+        final RuntimeException[] observed = {null};
+        StateMachine<SampleState, SampleEvent, SampleContext> machine =
+                new StateMachineBuilder<SampleState, SampleEvent, SampleContext>()
+                        .addTransition(
+                                SampleState.CREATED,
+                                SampleEvent.PAY,
+                                SampleState.PAID,
+                                null,
+                                transitionContext -> transitionContext.getContext().markPaid())
+                        .addListener(new StateMachineListener<SampleState, SampleEvent, SampleContext>() {
+                            @Override
+                            public void onSuccess(
+                                    TransitionContext<SampleState, SampleEvent, SampleContext> transitionContext) {
+                                throw new IllegalStateException("first listener failure");
+                            }
+                        })
+                        .addListener(new StateMachineListener<SampleState, SampleEvent, SampleContext>() {
+                            @Override
+                            public void onSuccess(
+                                    TransitionContext<SampleState, SampleEvent, SampleContext> transitionContext) {
+                                throw new IllegalStateException("second listener failure");
+                            }
+                        })
+                        .addListener(new StateMachineListener<SampleState, SampleEvent, SampleContext>() {
+                            @Override
+                            public void onError(
+                                    TransitionContext<SampleState, SampleEvent, SampleContext> transitionContext,
+                                    RuntimeException exception) {
+                                observed[0] = exception;
+                            }
+                        })
+                        .build();
+
+        TransitionResult<SampleState, SampleEvent, SampleContext> result =
+                machine.fire(SampleState.CREATED, SampleEvent.PAY, new SampleContext());
+
+        Assert.assertTrue(result.isSuccess());
+        Assert.assertNotNull(observed[0]);
+        Assert.assertTrue(observed[0].getCause() instanceof IllegalStateException);
+        Assert.assertEquals("first listener failure", observed[0].getCause().getMessage());
+        Assert.assertEquals(1, observed[0].getSuppressed().length);
+        Assert.assertTrue(observed[0].getSuppressed()[0].getMessage().contains("sourceState=CREATED"));
+        Assert.assertTrue(observed[0].getSuppressed()[0].getMessage().contains("targetState=PAID"));
+        Assert.assertTrue(observed[0].getSuppressed()[0].getMessage().contains("event=PAY"));
+        Assert.assertTrue(observed[0].getSuppressed()[0].getCause() instanceof IllegalStateException);
+        Assert.assertEquals(
+                "second listener failure",
+                observed[0].getSuppressed()[0].getCause().getMessage());
     }
 
     @Test
