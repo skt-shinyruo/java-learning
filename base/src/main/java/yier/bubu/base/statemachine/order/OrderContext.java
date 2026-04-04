@@ -45,7 +45,7 @@ public final class OrderContext {
     }
 
     public void addAuditLog(String auditLog) {
-        auditLogs.add(auditLog);
+        auditLogs.add(Objects.requireNonNull(auditLog, "auditLog"));
     }
 
     public List<String> getAuditLogs() {

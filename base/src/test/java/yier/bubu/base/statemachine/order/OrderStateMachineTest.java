@@ -77,6 +77,27 @@ public class OrderStateMachineTest {
     }
 
     @Test
+    public void cancellationPath_shouldCancelPaymentFailedOrder() {
+        StateMachine<OrderState, OrderEvent, OrderContext> machine = OrderStateMachineFactory.create();
+        OrderContext context = new OrderContext("ORDER-102A");
+
+        TransitionResult<OrderState, OrderEvent, OrderContext> failResult =
+                machine.fire(OrderState.CREATED, OrderEvent.PAYMENT_FAIL, context);
+        TransitionResult<OrderState, OrderEvent, OrderContext> cancelResult =
+                machine.fire(failResult.getTargetState(), OrderEvent.CANCEL, context);
+
+        Assert.assertTrue(failResult.isSuccess());
+        Assert.assertEquals(OrderState.PAYMENT_FAILED, failResult.getTargetState());
+        Assert.assertTrue(cancelResult.isSuccess());
+        Assert.assertEquals(OrderState.CANCELLED, cancelResult.getTargetState());
+        Assert.assertEquals(
+                Arrays.asList(
+                        "transition:CREATED->PAYMENT_FAILED by PAYMENT_FAIL",
+                        "transition:PAYMENT_FAILED->CANCELLED by CANCEL"),
+                context.getAuditLogs());
+    }
+
+    @Test
     public void refundPath_shouldMoveFromPaidToRefunded() {
         StateMachine<OrderState, OrderEvent, OrderContext> machine = OrderStateMachineFactory.create();
         OrderContext context = new OrderContext("ORDER-103");
@@ -101,6 +122,39 @@ public class OrderStateMachineTest {
                         "refund requested",
                         "transition:PAID->REFUNDING by APPLY_REFUND",
                         "transition:REFUNDING->REFUNDED by REFUND_SUCCESS"),
+                context.getAuditLogs());
+    }
+
+    @Test
+    public void refundPath_shouldApplyRefundFromCompletedOrder() {
+        StateMachine<OrderState, OrderEvent, OrderContext> machine = OrderStateMachineFactory.create();
+        OrderContext context = new OrderContext("ORDER-103A");
+
+        TransitionResult<OrderState, OrderEvent, OrderContext> payResult =
+                machine.fire(OrderState.CREATED, OrderEvent.PAY, context);
+        TransitionResult<OrderState, OrderEvent, OrderContext> shipResult =
+                machine.fire(payResult.getTargetState(), OrderEvent.SHIP, context);
+        TransitionResult<OrderState, OrderEvent, OrderContext> completeResult =
+                machine.fire(shipResult.getTargetState(), OrderEvent.COMPLETE, context);
+        TransitionResult<OrderState, OrderEvent, OrderContext> refundResult =
+                machine.fire(completeResult.getTargetState(), OrderEvent.APPLY_REFUND, context);
+
+        Assert.assertTrue(payResult.isSuccess());
+        Assert.assertTrue(shipResult.isSuccess());
+        Assert.assertTrue(completeResult.isSuccess());
+        Assert.assertEquals(OrderState.COMPLETED, completeResult.getTargetState());
+        Assert.assertTrue(refundResult.isSuccess());
+        Assert.assertEquals(OrderState.REFUNDING, refundResult.getTargetState());
+        Assert.assertTrue(context.isRefundRequested());
+        Assert.assertEquals(
+                Arrays.asList(
+                        "payment captured",
+                        "transition:CREATED->PAID by PAY",
+                        "shipment dispatched",
+                        "transition:PAID->SHIPPED by SHIP",
+                        "transition:SHIPPED->COMPLETED by COMPLETE",
+                        "refund requested",
+                        "transition:COMPLETED->REFUNDING by APPLY_REFUND"),
                 context.getAuditLogs());
     }
 
@@ -131,5 +185,17 @@ public class OrderStateMachineTest {
         Assert.assertNull(result.getTargetState());
         Assert.assertFalse(context.hasShipment());
         Assert.assertTrue(context.getAuditLogs().isEmpty());
+    }
+
+    @Test
+    public void addAuditLog_shouldRejectNullInput() {
+        OrderContext context = new OrderContext("ORDER-106");
+
+        try {
+            context.addAuditLog(null);
+            Assert.fail("Expected null audit log to be rejected");
+        } catch (NullPointerException exception) {
+            Assert.assertEquals("auditLog", exception.getMessage());
+        }
     }
 }
