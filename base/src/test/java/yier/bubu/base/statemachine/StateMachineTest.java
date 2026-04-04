@@ -3,6 +3,10 @@ package yier.bubu.base.statemachine;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 public class StateMachineTest {
     private enum SampleState {
         CREATED,
@@ -16,6 +20,29 @@ public class StateMachineTest {
     }
 
     private static final class SampleContext {
+        private boolean allowPayment = true;
+        private boolean paid;
+        private final List<String> auditLogs = new ArrayList<String>();
+
+        boolean isAllowPayment() {
+            return allowPayment;
+        }
+
+        void setAllowPayment(boolean allowPayment) {
+            this.allowPayment = allowPayment;
+        }
+
+        boolean isPaid() {
+            return paid;
+        }
+
+        void markPaid() {
+            this.paid = true;
+        }
+
+        List<String> getAuditLogs() {
+            return auditLogs;
+        }
     }
 
     @Test
@@ -70,7 +97,86 @@ public class StateMachineTest {
     }
 
     @Test
-    public void addTransition_shouldRejectDuplicateSourceStateAndEvent() {
+    public void fire_shouldRejectWhenGuardReturnsFalseAndSkipAction() {
+        final boolean[] actionExecuted = {false};
+        StateMachine<SampleState, SampleEvent, SampleContext> machine =
+                new StateMachineBuilder<SampleState, SampleEvent, SampleContext>()
+                        .addTransition(
+                                SampleState.CREATED,
+                                SampleEvent.PAY,
+                                SampleState.PAID,
+                                transitionContext -> transitionContext.getContext().isAllowPayment(),
+                                transitionContext -> actionExecuted[0] = true)
+                        .build();
+
+        SampleContext context = new SampleContext();
+        context.setAllowPayment(false);
+
+        TransitionResult<SampleState, SampleEvent, SampleContext> result =
+                machine.fire(SampleState.CREATED, SampleEvent.PAY, context);
+
+        Assert.assertFalse(result.isSuccess());
+        Assert.assertEquals(RejectionReason.GUARD_REJECTED, result.getRejectionReason());
+        Assert.assertFalse(actionExecuted[0]);
+    }
+
+    @Test
+    public void fire_shouldRunActionAndNotifySuccessListener() {
+        StateMachine<SampleState, SampleEvent, SampleContext> machine =
+                new StateMachineBuilder<SampleState, SampleEvent, SampleContext>()
+                        .addTransition(
+                                SampleState.CREATED,
+                                SampleEvent.PAY,
+                                SampleState.PAID,
+                                null,
+                                transitionContext -> {
+                                    transitionContext.getContext().markPaid();
+                                    transitionContext.getContext().getAuditLogs().add("action:" + transitionContext.getEvent());
+                                })
+                        .addListener(new StateMachineListener<SampleState, SampleEvent, SampleContext>() {
+                            @Override
+                            public void onSuccess(TransitionContext<SampleState, SampleEvent, SampleContext> transitionContext) {
+                                transitionContext.getContext().getAuditLogs().add(
+                                        "listener:" + transitionContext.getSourceState() + "->" + transitionContext.getTargetState());
+                            }
+                        })
+                        .build();
+
+        SampleContext context = new SampleContext();
+        TransitionResult<SampleState, SampleEvent, SampleContext> result =
+                machine.fire(SampleState.CREATED, SampleEvent.PAY, context);
+
+        Assert.assertTrue(result.isSuccess());
+        Assert.assertTrue(context.isPaid());
+        Assert.assertEquals(Arrays.asList("action:PAY", "listener:CREATED->PAID"), context.getAuditLogs());
+    }
+
+    @Test
+    public void canFire_shouldUseGuardWithoutRunningAction() {
+        final boolean[] actionExecuted = {false};
+        StateMachine<SampleState, SampleEvent, SampleContext> machine =
+                new StateMachineBuilder<SampleState, SampleEvent, SampleContext>()
+                        .addTransition(
+                                SampleState.CREATED,
+                                SampleEvent.PAY,
+                                SampleState.PAID,
+                                transitionContext -> transitionContext.getContext().isAllowPayment(),
+                                transitionContext -> actionExecuted[0] = true)
+                        .build();
+
+        SampleContext allowed = new SampleContext();
+        allowed.setAllowPayment(true);
+        Assert.assertTrue(machine.canFire(SampleState.CREATED, SampleEvent.PAY, allowed));
+        Assert.assertFalse(actionExecuted[0]);
+
+        SampleContext blocked = new SampleContext();
+        blocked.setAllowPayment(false);
+        Assert.assertFalse(machine.canFire(SampleState.CREATED, SampleEvent.PAY, blocked));
+        Assert.assertFalse(actionExecuted[0]);
+    }
+
+    @Test
+    public void addTransition_shouldRejectDuplicateDefinition() {
         StateMachineBuilder<SampleState, SampleEvent, SampleContext> builder =
                 new StateMachineBuilder<SampleState, SampleEvent, SampleContext>()
                         .addTransition(SampleState.CREATED, SampleEvent.PAY, SampleState.PAID);
@@ -85,7 +191,7 @@ public class StateMachineTest {
     }
 
     @Test
-    public void build_shouldRejectEmptyBuilder() {
+    public void build_shouldRejectEmptyDefinition() {
         StateMachineBuilder<SampleState, SampleEvent, SampleContext> builder =
                 new StateMachineBuilder<SampleState, SampleEvent, SampleContext>();
 
@@ -94,6 +200,109 @@ public class StateMachineTest {
             Assert.fail("Expected empty builder to throw");
         } catch (IllegalStateException ex) {
             Assert.assertTrue(ex.getMessage().contains("At least one transition"));
+        }
+    }
+
+    @Test
+    public void fire_shouldNotifyRejectedListener() {
+        final List<String> notifications = new ArrayList<String>();
+        StateMachine<SampleState, SampleEvent, SampleContext> machine =
+                new StateMachineBuilder<SampleState, SampleEvent, SampleContext>()
+                        .addTransition(SampleState.CREATED, SampleEvent.PAY, SampleState.PAID)
+                        .addListener(new StateMachineListener<SampleState, SampleEvent, SampleContext>() {
+                            @Override
+                            public void onRejected(SampleState sourceState,
+                                                   SampleEvent event,
+                                                   SampleContext context,
+                                                   RejectionReason rejectionReason) {
+                                notifications.add(sourceState + ":" + event + ":" + rejectionReason);
+                            }
+                        })
+                        .build();
+
+        TransitionResult<SampleState, SampleEvent, SampleContext> result =
+                machine.fire(SampleState.CREATED, SampleEvent.CANCEL, new SampleContext());
+
+        Assert.assertFalse(result.isSuccess());
+        Assert.assertEquals(Arrays.asList("CREATED:CANCEL:NO_TRANSITION_DEFINED"), notifications);
+    }
+
+    @Test
+    public void fire_shouldWrapActionFailureWithTransitionContext() {
+        StateMachine<SampleState, SampleEvent, SampleContext> machine =
+                new StateMachineBuilder<SampleState, SampleEvent, SampleContext>()
+                        .addTransition(
+                                SampleState.CREATED,
+                                SampleEvent.PAY,
+                                SampleState.PAID,
+                                null,
+                                transitionContext -> {
+                                    throw new IllegalArgumentException("boom");
+                                })
+                        .build();
+
+        try {
+            machine.fire(SampleState.CREATED, SampleEvent.PAY, new SampleContext());
+            Assert.fail("Expected action failure to be rethrown");
+        } catch (IllegalStateException exception) {
+            Assert.assertTrue(exception.getMessage().contains("sourceState=CREATED"));
+            Assert.assertTrue(exception.getMessage().contains("targetState=PAID"));
+            Assert.assertTrue(exception.getMessage().contains("event=PAY"));
+            Assert.assertTrue(exception.getCause() instanceof IllegalArgumentException);
+        }
+    }
+
+    @Test
+    public void fire_shouldNotifyErrorListenerBeforeRethrowingActionFailure() {
+        final List<String> notifications = new ArrayList<String>();
+        StateMachine<SampleState, SampleEvent, SampleContext> machine =
+                new StateMachineBuilder<SampleState, SampleEvent, SampleContext>()
+                        .addTransition(
+                                SampleState.CREATED,
+                                SampleEvent.PAY,
+                                SampleState.PAID,
+                                null,
+                                transitionContext -> {
+                                    throw new IllegalArgumentException("boom");
+                                })
+                        .addListener(new StateMachineListener<SampleState, SampleEvent, SampleContext>() {
+                            @Override
+                            public void onError(
+                                    TransitionContext<SampleState, SampleEvent, SampleContext> transitionContext,
+                                    RuntimeException exception) {
+                                notifications.add(
+                                        transitionContext.getSourceState() + "->" + transitionContext.getTargetState());
+                            }
+                        })
+                        .build();
+
+        try {
+            machine.fire(SampleState.CREATED, SampleEvent.PAY, new SampleContext());
+            Assert.fail("Expected action failure to be rethrown");
+        } catch (IllegalStateException exception) {
+            Assert.assertEquals(Arrays.asList("CREATED->PAID"), notifications);
+        }
+    }
+
+    @Test
+    public void fire_shouldPropagateListenerFailure() {
+        StateMachine<SampleState, SampleEvent, SampleContext> machine =
+                new StateMachineBuilder<SampleState, SampleEvent, SampleContext>()
+                        .addTransition(SampleState.CREATED, SampleEvent.PAY, SampleState.PAID)
+                        .addListener(new StateMachineListener<SampleState, SampleEvent, SampleContext>() {
+                            @Override
+                            public void onSuccess(
+                                    TransitionContext<SampleState, SampleEvent, SampleContext> transitionContext) {
+                                throw new IllegalStateException("listener failure");
+                            }
+                        })
+                        .build();
+
+        try {
+            machine.fire(SampleState.CREATED, SampleEvent.PAY, new SampleContext());
+            Assert.fail("Expected listener failure to propagate");
+        } catch (IllegalStateException exception) {
+            Assert.assertEquals("listener failure", exception.getMessage());
         }
     }
 
@@ -110,5 +319,35 @@ public class StateMachineTest {
 
         Assert.assertFalse(machine.canFire(SampleState.CREATED, SampleEvent.CANCEL, context));
         Assert.assertTrue(updatedMachine.canFire(SampleState.CREATED, SampleEvent.CANCEL, context));
+    }
+
+    @Test
+    public void build_shouldSnapshotListeners() {
+        StateMachineBuilder<SampleState, SampleEvent, SampleContext> builder =
+                new StateMachineBuilder<SampleState, SampleEvent, SampleContext>()
+                        .addTransition(SampleState.CREATED, SampleEvent.PAY, SampleState.PAID);
+        builder.addListener(new StateMachineListener<SampleState, SampleEvent, SampleContext>() {
+            @Override
+            public void onSuccess(TransitionContext<SampleState, SampleEvent, SampleContext> transitionContext) {
+                transitionContext.getContext().getAuditLogs().add("initial");
+            }
+        });
+        StateMachine<SampleState, SampleEvent, SampleContext> machine = builder.build();
+
+        builder.addListener(new StateMachineListener<SampleState, SampleEvent, SampleContext>() {
+            @Override
+            public void onSuccess(TransitionContext<SampleState, SampleEvent, SampleContext> transitionContext) {
+                transitionContext.getContext().getAuditLogs().add("late");
+            }
+        });
+        StateMachine<SampleState, SampleEvent, SampleContext> updatedMachine = builder.build();
+
+        SampleContext firstContext = new SampleContext();
+        machine.fire(SampleState.CREATED, SampleEvent.PAY, firstContext);
+        Assert.assertEquals(Arrays.asList("initial"), firstContext.getAuditLogs());
+
+        SampleContext secondContext = new SampleContext();
+        updatedMachine.fire(SampleState.CREATED, SampleEvent.PAY, secondContext);
+        Assert.assertEquals(Arrays.asList("initial", "late"), secondContext.getAuditLogs());
     }
 }
