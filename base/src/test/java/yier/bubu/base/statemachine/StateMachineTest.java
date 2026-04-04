@@ -44,13 +44,15 @@ public class StateMachineTest {
                         .addTransition(SampleState.CREATED, SampleEvent.PAY, SampleState.PAID)
                         .build();
 
+        SampleContext context = new SampleContext();
         TransitionResult<SampleState, SampleEvent, SampleContext> result =
-                machine.fire(SampleState.CREATED, SampleEvent.CANCEL, new SampleContext());
+                machine.fire(SampleState.CREATED, SampleEvent.CANCEL, context);
 
         Assert.assertFalse(result.isSuccess());
         Assert.assertEquals(SampleState.CREATED, result.getSourceState());
         Assert.assertNull(result.getTargetState());
         Assert.assertEquals(SampleEvent.CANCEL, result.getEvent());
+        Assert.assertSame(context, result.getContext());
         Assert.assertEquals(RejectionReason.NO_TRANSITION_DEFINED, result.getRejectionReason());
     }
 }
