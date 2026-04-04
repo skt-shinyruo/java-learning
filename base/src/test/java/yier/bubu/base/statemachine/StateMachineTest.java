@@ -285,7 +285,43 @@ public class StateMachineTest {
     }
 
     @Test
-    public void fire_shouldPropagateListenerFailure() {
+    public void fire_shouldPreserveActionFailureWhenErrorListenerThrows() {
+        StateMachine<SampleState, SampleEvent, SampleContext> machine =
+                new StateMachineBuilder<SampleState, SampleEvent, SampleContext>()
+                        .addTransition(
+                                SampleState.CREATED,
+                                SampleEvent.PAY,
+                                SampleState.PAID,
+                                null,
+                                transitionContext -> {
+                                    throw new IllegalArgumentException("boom");
+                                })
+                        .addListener(new StateMachineListener<SampleState, SampleEvent, SampleContext>() {
+                            @Override
+                            public void onError(
+                                    TransitionContext<SampleState, SampleEvent, SampleContext> transitionContext,
+                                    RuntimeException exception) {
+                                throw new IllegalStateException("listener failure");
+                            }
+                        })
+                        .build();
+
+        try {
+            machine.fire(SampleState.CREATED, SampleEvent.PAY, new SampleContext());
+            Assert.fail("Expected action failure to be rethrown");
+        } catch (IllegalStateException exception) {
+            Assert.assertTrue(exception.getMessage().contains("Failed to execute transition action"));
+            Assert.assertEquals(1, exception.getSuppressed().length);
+            Assert.assertTrue(exception.getSuppressed()[0].getMessage().contains("sourceState=CREATED"));
+            Assert.assertTrue(exception.getSuppressed()[0].getMessage().contains("targetState=PAID"));
+            Assert.assertTrue(exception.getSuppressed()[0].getMessage().contains("event=PAY"));
+            Assert.assertTrue(exception.getSuppressed()[0].getCause() instanceof IllegalStateException);
+            Assert.assertEquals("listener failure", exception.getSuppressed()[0].getCause().getMessage());
+        }
+    }
+
+    @Test
+    public void fire_shouldWrapSuccessListenerFailureWithTransitionContext() {
         StateMachine<SampleState, SampleEvent, SampleContext> machine =
                 new StateMachineBuilder<SampleState, SampleEvent, SampleContext>()
                         .addTransition(SampleState.CREATED, SampleEvent.PAY, SampleState.PAID)
@@ -302,7 +338,39 @@ public class StateMachineTest {
             machine.fire(SampleState.CREATED, SampleEvent.PAY, new SampleContext());
             Assert.fail("Expected listener failure to propagate");
         } catch (IllegalStateException exception) {
-            Assert.assertEquals("listener failure", exception.getMessage());
+            Assert.assertTrue(exception.getMessage().contains("sourceState=CREATED"));
+            Assert.assertTrue(exception.getMessage().contains("targetState=PAID"));
+            Assert.assertTrue(exception.getMessage().contains("event=PAY"));
+            Assert.assertTrue(exception.getCause() instanceof IllegalStateException);
+            Assert.assertEquals("listener failure", exception.getCause().getMessage());
+        }
+    }
+
+    @Test
+    public void fire_shouldWrapRejectedListenerFailureWithTransitionContext() {
+        StateMachine<SampleState, SampleEvent, SampleContext> machine =
+                new StateMachineBuilder<SampleState, SampleEvent, SampleContext>()
+                        .addTransition(SampleState.CREATED, SampleEvent.PAY, SampleState.PAID)
+                        .addListener(new StateMachineListener<SampleState, SampleEvent, SampleContext>() {
+                            @Override
+                            public void onRejected(SampleState sourceState,
+                                                   SampleEvent event,
+                                                   SampleContext context,
+                                                   RejectionReason rejectionReason) {
+                                throw new IllegalStateException("listener failure");
+                            }
+                        })
+                        .build();
+
+        try {
+            machine.fire(SampleState.CREATED, SampleEvent.CANCEL, new SampleContext());
+            Assert.fail("Expected listener failure to propagate");
+        } catch (IllegalStateException exception) {
+            Assert.assertTrue(exception.getMessage().contains("sourceState=CREATED"));
+            Assert.assertTrue(exception.getMessage().contains("targetState=null"));
+            Assert.assertTrue(exception.getMessage().contains("event=CANCEL"));
+            Assert.assertTrue(exception.getCause() instanceof IllegalStateException);
+            Assert.assertEquals("listener failure", exception.getCause().getMessage());
         }
     }
 

@@ -54,7 +54,7 @@ public final class StateMachine<S extends Enum<S>, E extends Enum<E>, C> {
                             + ", targetState=" + definition.getTargetState()
                             + ", event=" + event,
                     exception);
-            notifyError(transitionContext, wrapped);
+            notifyError(transitionContext, wrapped, wrapped);
             throw wrapped;
         }
 
@@ -93,19 +93,56 @@ public final class StateMachine<S extends Enum<S>, E extends Enum<E>, C> {
 
     private void notifySuccess(TransitionContext<S, E, C> transitionContext) {
         for (StateMachineListener<S, E, C> listener : listeners) {
-            listener.onSuccess(transitionContext);
+            try {
+                listener.onSuccess(transitionContext);
+            } catch (RuntimeException exception) {
+                throw wrapListenerFailure(
+                        "success",
+                        transitionContext.getSourceState(),
+                        transitionContext.getTargetState(),
+                        transitionContext.getEvent(),
+                        exception);
+            }
         }
     }
 
     private void notifyRejected(S sourceState, E event, C context, RejectionReason rejectionReason) {
         for (StateMachineListener<S, E, C> listener : listeners) {
-            listener.onRejected(sourceState, event, context, rejectionReason);
+            try {
+                listener.onRejected(sourceState, event, context, rejectionReason);
+            } catch (RuntimeException exception) {
+                throw wrapListenerFailure("rejected", sourceState, null, event, exception);
+            }
         }
     }
 
-    private void notifyError(TransitionContext<S, E, C> transitionContext, RuntimeException exception) {
+    private void notifyError(TransitionContext<S, E, C> transitionContext,
+                             RuntimeException exception,
+                             RuntimeException primaryException) {
         for (StateMachineListener<S, E, C> listener : listeners) {
-            listener.onError(transitionContext, exception);
+            try {
+                listener.onError(transitionContext, exception);
+            } catch (RuntimeException listenerException) {
+                primaryException.addSuppressed(
+                        wrapListenerFailure(
+                                "error",
+                                transitionContext.getSourceState(),
+                                transitionContext.getTargetState(),
+                                transitionContext.getEvent(),
+                                listenerException));
+            }
         }
+    }
+
+    private IllegalStateException wrapListenerFailure(String phase,
+                                                      S sourceState,
+                                                      S targetState,
+                                                      E event,
+                                                      RuntimeException exception) {
+        return new IllegalStateException(
+                "Listener failed during " + phase + " notification: sourceState=" + sourceState
+                        + ", targetState=" + targetState
+                        + ", event=" + event,
+                exception);
     }
 }
