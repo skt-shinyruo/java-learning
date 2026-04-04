@@ -55,4 +55,45 @@ public class StateMachineTest {
         Assert.assertSame(context, result.getContext());
         Assert.assertEquals(RejectionReason.NO_TRANSITION_DEFINED, result.getRejectionReason());
     }
+
+    @Test
+    public void canFire_shouldReturnTrueForExistingTransitionAndFalseForMissingTransition() {
+        StateMachine<SampleState, SampleEvent, SampleContext> machine =
+                new StateMachineBuilder<SampleState, SampleEvent, SampleContext>()
+                        .addTransition(SampleState.CREATED, SampleEvent.PAY, SampleState.PAID)
+                        .build();
+
+        SampleContext context = new SampleContext();
+
+        Assert.assertTrue(machine.canFire(SampleState.CREATED, SampleEvent.PAY, context));
+        Assert.assertFalse(machine.canFire(SampleState.CREATED, SampleEvent.CANCEL, context));
+    }
+
+    @Test
+    public void addTransition_shouldRejectDuplicateSourceStateAndEvent() {
+        StateMachineBuilder<SampleState, SampleEvent, SampleContext> builder =
+                new StateMachineBuilder<SampleState, SampleEvent, SampleContext>()
+                        .addTransition(SampleState.CREATED, SampleEvent.PAY, SampleState.PAID);
+
+        try {
+            builder.addTransition(SampleState.CREATED, SampleEvent.PAY, SampleState.CANCELLED);
+            Assert.fail("Expected duplicate transition registration to throw");
+        } catch (IllegalStateException ex) {
+            Assert.assertTrue(ex.getMessage().contains("sourceState=CREATED"));
+            Assert.assertTrue(ex.getMessage().contains("event=PAY"));
+        }
+    }
+
+    @Test
+    public void build_shouldRejectEmptyBuilder() {
+        StateMachineBuilder<SampleState, SampleEvent, SampleContext> builder =
+                new StateMachineBuilder<SampleState, SampleEvent, SampleContext>();
+
+        try {
+            builder.build();
+            Assert.fail("Expected empty builder to throw");
+        } catch (IllegalStateException ex) {
+            Assert.assertTrue(ex.getMessage().contains("At least one transition"));
+        }
+    }
 }
