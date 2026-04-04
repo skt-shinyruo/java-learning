@@ -20,7 +20,7 @@ public final class StateMachine<S extends Enum<S>, E extends Enum<E>, C> {
 
         TransitionDefinition<S, E, C> definition = findDefinition(sourceState, event);
         if (definition == null) {
-            notifyRejected(sourceState, event, context, RejectionReason.NO_TRANSITION_DEFINED);
+            notifyRejected(sourceState, null, event, context, RejectionReason.NO_TRANSITION_DEFINED);
             return TransitionResult.rejected(
                     sourceState,
                     null,
@@ -34,7 +34,12 @@ public final class StateMachine<S extends Enum<S>, E extends Enum<E>, C> {
 
         if (definition.getGuard() != null && !definition.getGuard().test(transitionContext)) {
             // 守卫失败代表业务条件不满足，返回拒绝结果即可，不把它当作系统异常。
-            notifyRejected(sourceState, event, context, RejectionReason.GUARD_REJECTED);
+            notifyRejected(
+                    sourceState,
+                    transitionContext.getTargetState(),
+                    event,
+                    context,
+                    RejectionReason.GUARD_REJECTED);
             return TransitionResult.rejected(
                     sourceState,
                     null,
@@ -106,12 +111,12 @@ public final class StateMachine<S extends Enum<S>, E extends Enum<E>, C> {
         }
     }
 
-    private void notifyRejected(S sourceState, E event, C context, RejectionReason rejectionReason) {
+    private void notifyRejected(S sourceState, S targetState, E event, C context, RejectionReason rejectionReason) {
         for (StateMachineListener<S, E, C> listener : listeners) {
             try {
                 listener.onRejected(sourceState, event, context, rejectionReason);
             } catch (RuntimeException exception) {
-                throw wrapListenerFailure("rejected", sourceState, null, event, exception);
+                throw wrapListenerFailure("rejected", sourceState, targetState, event, exception);
             }
         }
     }

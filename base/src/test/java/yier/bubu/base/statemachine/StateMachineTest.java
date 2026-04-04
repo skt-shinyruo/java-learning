@@ -375,6 +375,38 @@ public class StateMachineTest {
     }
 
     @Test
+    public void fire_shouldWrapGuardRejectedListenerFailureWithKnownTargetState() {
+        StateMachine<SampleState, SampleEvent, SampleContext> machine =
+                new StateMachineBuilder<SampleState, SampleEvent, SampleContext>()
+                        .addTransition(
+                                SampleState.CREATED,
+                                SampleEvent.PAY,
+                                SampleState.PAID,
+                                transitionContext -> false)
+                        .addListener(new StateMachineListener<SampleState, SampleEvent, SampleContext>() {
+                            @Override
+                            public void onRejected(SampleState sourceState,
+                                                   SampleEvent event,
+                                                   SampleContext context,
+                                                   RejectionReason rejectionReason) {
+                                throw new IllegalStateException("listener failure");
+                            }
+                        })
+                        .build();
+
+        try {
+            machine.fire(SampleState.CREATED, SampleEvent.PAY, new SampleContext());
+            Assert.fail("Expected listener failure to propagate");
+        } catch (IllegalStateException exception) {
+            Assert.assertTrue(exception.getMessage().contains("sourceState=CREATED"));
+            Assert.assertTrue(exception.getMessage().contains("targetState=PAID"));
+            Assert.assertTrue(exception.getMessage().contains("event=PAY"));
+            Assert.assertTrue(exception.getCause() instanceof IllegalStateException);
+            Assert.assertEquals("listener failure", exception.getCause().getMessage());
+        }
+    }
+
+    @Test
     public void build_shouldSnapshotTransitions() {
         StateMachineBuilder<SampleState, SampleEvent, SampleContext> builder =
                 new StateMachineBuilder<SampleState, SampleEvent, SampleContext>()
