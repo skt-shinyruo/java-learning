@@ -57,6 +57,7 @@ nav:
       - JMM Notes: concurrency/content/jmm-notes.md
       - Thread Creation and Start: concurrency/content/thread-creation.md
       - Volatile and JMM: concurrency/content/volatile-jmm.md
+      - Non-volatile Stop Flag and -Xint: concurrency/content/non-volatile-stop-flag-and-xint.md
       - CAS Notes: concurrency/content/cas-notes.md
       - Synchronized Notes: concurrency/content/synchronized-notes.md
       - Thread States: concurrency/content/thread-states.md

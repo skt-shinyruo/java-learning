@@ -14,6 +14,7 @@
 
 - [`thread-creation.md`](./thread-creation.md)：聚焦 `new Thread()` / `start()` 时 JVM 规范、HotSpot 实现和 JMM 分别在关注什么
 - [`volatile-jmm.md`](./volatile-jmm.md)：只聚焦 `volatile` 的可见性与发布语义
+- [`non-volatile-stop-flag-and-xint.md`](./non-volatile-stop-flag-and-xint.md)：单独解释“为什么普通 stop flag 可能停不下来，以及为什么 `-Xint` 常常又能退出”
 - [`cas-notes.md`](./cas-notes.md)：只聚焦 `CAS` 的实现原理、内存语义、ABA 与常见用法
 - [`synchronized-notes.md`](./synchronized-notes.md)：只聚焦 `synchronized`、monitor、字节码、对象头
 - [`wait-notify.md`](./wait-notify.md)：只聚焦 `wait/notify/notifyAll` 和条件等待

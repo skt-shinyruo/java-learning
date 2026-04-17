@@ -7,13 +7,14 @@ This section groups the Java concurrency notes under `concurrency/docs`.
 1. [JMM Notes](content/jmm-notes.md)
 2. [Thread Creation and Start](content/thread-creation.md)
 3. [Volatile and JMM](content/volatile-jmm.md)
-4. [CAS Notes](content/cas-notes.md)
-5. [Synchronized Notes](content/synchronized-notes.md)
-6. [Thread States](content/thread-states.md)
-7. [Wait / Notify](content/wait-notify.md)
-8. [LockSupport](content/lock-support.md)
-9. [ThreadLocal](content/thread-local.md)
-10. [Virtual Threads](content/virtual-threads.md)
+4. [Non-volatile Stop Flag and -Xint](content/non-volatile-stop-flag-and-xint.md)
+5. [CAS Notes](content/cas-notes.md)
+6. [Synchronized Notes](content/synchronized-notes.md)
+7. [Thread States](content/thread-states.md)
+8. [Wait / Notify](content/wait-notify.md)
+9. [LockSupport](content/lock-support.md)
+10. [ThreadLocal](content/thread-local.md)
+11. [Virtual Threads](content/virtual-threads.md)
 
 ## Reference Material
 
