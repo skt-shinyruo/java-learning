@@ -3,9 +3,13 @@
 本文档配合 `concurrency` 模块中的示例与测试，说明 `volatile` 在 Java 内存模型（JMM）下的核心语义：**可见性**与**有序性（通过 happens-before / release-acquire 语义形成的重排约束）**。
 
 如果你想先看一篇把 JMM 主线、`volatile` / `synchronized` / `final` 对比、经典面试题、底层内存屏障以及 `CAS/AQS/ConcurrentHashMap` 串起来的总览，可以先读 [jmm-notes.md](./jmm-notes.md)。
+如果你想看一组专门说明“volatile 放在不同位置为什么语义完全不同”的 JCStress 例子，可以继续看 [jcstress-ordering-partial.md](./jcstress-ordering-partial.md)。
 
 对应代码位置：
 - 单元测试（带结论断言 + 中文说明）：`concurrency/src/test/java/yier/bubu/concurrency/VolatileVisibilityAndReorderingTest.java`
+- JCStress 示例（统计不同交错下的结果分布）：`concurrency/src/test/java/yier/bubu/concurrency/jcstress/`
+  - `TestOrderingPartial`
+  - `TestVisibility`
 - 演示类（被测试引用，可在其他地方复用）：`concurrency/src/main/java/yier/bubu/concurrency/jmm/`
   - `VolatileStopFlagDemo`
   - `VolatilePublishDemo`

@@ -110,23 +110,30 @@
 
 - 建议使用 **JDK 9+**（本用例包含 `VarHandle`）
 
-编译 `concurrency` 模块（只编译，不跑 JUnit）：
+先把 `base` 模块安装到本地仓库，再编译 `concurrency` 的测试类：
 
 ```bash
+mvn -pl base -am -DskipTests install
 mvn -pl concurrency -am -DskipTests test-compile
+```
+
+生成 `concurrency` 模块的测试类路径：
+
+```bash
+mvn -f concurrency/pom.xml -DincludeScope=test dependency:build-classpath \
+  -Dmdep.outputFile=/tmp/jcstress-visibility.classpath
 ```
 
 运行 JCStress（只跑 `TestVisibility`）：
 
 ```bash
-mvn -pl concurrency -am -DskipTests org.codehaus.mojo:exec-maven-plugin:3.3.0:java \
-  -Dexec.classpathScope=test \
-  -Dexec.mainClass=org.openjdk.jcstress.Main \
-  -Dexec.args="-t yier.bubu.concurrency.jcstress.TestVisibility"
+cd concurrency
+java -cp "target/test-classes:target/classes:$(cat /tmp/jcstress-visibility.classpath)" \
+  org.openjdk.jcstress.Main -t yier.bubu.concurrency.jcstress.TestVisibility
 ```
 
 说明：
 
 - JCStress 运行时间可能较长，并且会尽量探索不同的交错时序；这是它的价值所在。
 - 如果你只是在学习，建议先从只跑一个测试类开始（用 `-t` 过滤）。
-
+- 这里没有继续使用 `exec-maven-plugin:java`，因为 JCStress 会 fork 子 JVM；在这个多模块工程里，显式类路径的方式更稳定。

@@ -14,6 +14,7 @@
 
 - [`thread-creation.md`](./thread-creation.md)：聚焦 `new Thread()` / `start()` 时 JVM 规范、HotSpot 实现和 JMM 分别在关注什么
 - [`volatile-jmm.md`](./volatile-jmm.md)：只聚焦 `volatile` 的可见性与发布语义
+- [`jcstress-ordering-partial.md`](./jcstress-ordering-partial.md)：用 JCStress 拆开“volatile 放在不同位置为什么不是等价写法”
 - [`non-volatile-stop-flag-and-xint.md`](./non-volatile-stop-flag-and-xint.md)：单独解释“为什么普通 stop flag 可能停不下来，以及为什么 `-Xint` 常常又能退出”
 - [`cas-notes.md`](./cas-notes.md)：只聚焦 `CAS` 的实现原理、内存语义、ABA 与常见用法
 - [`synchronized-notes.md`](./synchronized-notes.md)：只聚焦 `synchronized`、monitor、字节码、对象头
@@ -729,10 +730,11 @@ JDK 8 之后的 `ConcurrentHashMap` 可以概括成一句话：
 1. 本文，先把 JMM 的主线建立起来
 2. [`thread-creation.md`](./thread-creation.md)，把线程启动/终止规则和 JVM 线程上下文建立过程连起来
 3. [`volatile-jmm.md`](./volatile-jmm.md)，把发布/可见性/反例吃透
-4. [`cas-notes.md`](./cas-notes.md)，把原子类、CAS 自旋、HotSpot/CPU 实现链路补齐
-5. [`synchronized-notes.md`](./synchronized-notes.md)，把 monitor、字节码、锁语义补齐
-6. [`wait-notify.md`](./wait-notify.md)，把条件等待和 monitor 协作补齐
-7. [`lock-support.md`](./lock-support.md)，把 `park/unpark`、permit 和 AQS 底层阻塞原语补齐
-8. [`references/jmm/jsr-133-faq.md`](./references/jmm/jsr-133-faq.md)，再回到 JSR-133 FAQ 看官方口径
+4. [`jcstress-ordering-partial.md`](./jcstress-ordering-partial.md)，把“同样用了 volatile，为什么 Case2 和 Case3 结论相反”这件事吃透
+5. [`cas-notes.md`](./cas-notes.md)，把原子类、CAS 自旋、HotSpot/CPU 实现链路补齐
+6. [`synchronized-notes.md`](./synchronized-notes.md)，把 monitor、字节码、锁语义补齐
+7. [`wait-notify.md`](./wait-notify.md)，把条件等待和 monitor 协作补齐
+8. [`lock-support.md`](./lock-support.md)，把 `park/unpark`、permit 和 AQS 底层阻塞原语补齐
+9. [`references/jmm/jsr-133-faq.md`](./references/jmm/jsr-133-faq.md)，再回到 JSR-133 FAQ 看官方口径
 
 这样读下来，概念、代码、规范、源码视角会连成一条线。
