@@ -28,6 +28,7 @@
 
     <junit.version>4.13.2</junit.version>
     <netty.version>4.1.109.Final</netty.version>
+    <jcstress.version>0.16</jcstress.version>
   </properties>
 
   <dependencyManagement>
@@ -36,6 +37,12 @@
         <groupId>junit</groupId>
         <artifactId>junit</artifactId>
         <version>${junit.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.openjdk.jcstress</groupId>
+        <artifactId>jcstress-core</artifactId>
+        <version>${jcstress.version}</version>
         <scope>test</scope>
       </dependency>
       <dependency>
