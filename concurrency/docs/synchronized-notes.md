@@ -533,6 +533,54 @@ Mark Word 是 HotSpot 对象头中的一部分，用来保存对象的运行时�
 
 这就是很多老资料里“Mark Word 指针切换”的来源。
 
+#### 4.2.1 lock record（栈锁记录）是什么（以及为什么它不只是“标记”）
+
+在经典 JDK 8 语境里，“轻量级锁（thin lock / stack lock）”会在**当前线程的栈帧里**放一个锁记录（常被称为 *lock record* / *monitor record* / *stack lock*；在 HotSpot 源码里对应 `BasicLock` / `BasicObjectLock` 这类结构）。
+
+可以把它理解成一次 `monitorenter` 的“栈上凭证”，它至少要承担两件事：
+
+1. **保存 displaced header（被挤出的对象头）**
+   - 轻量级锁会把对象头的 **原始 Mark Word** 先拷贝到 lock record 里（常叫 displaced header）。
+   - 解锁时需要把对象头恢复回去；如果不存这份备份，就没法正确恢复对象头。
+
+2. **作为 owner token（所有者凭证）**
+   - 轻量级锁加锁成功后，对象头会变成“**指向该 lock record 的指针 + 锁状态位**”。
+   - 由于每个线程的栈地址空间互不重叠，“指针指向哪个线程的栈”就隐含了“哪条线程持有锁”，不需要额外在对象头里塞 thread id。
+
+它不是用来“阻塞/唤醒线程”的结构：真正需要挂起/唤醒时，HotSpot 会把锁**膨胀**到 `ObjectMonitor`（重量级 monitor）上去处理。
+
+#### 4.2.2 轻量级锁（thin lock）的加锁 / 重入 / 解锁主线（经典模型）
+
+下面这条流程，就是你经常看到的那段描述背后的含义（仍以经典 JDK 8 的 thin lock 语境为主）：
+
+**(1) 第一次进入：CAS 把对象头改成指向 lock record 的指针**
+
+```text
+T1 栈帧里创建 lock record
+  - record.displaced = obj.markWord (原始 Mark Word)
+
+CAS(obj.markWord, expected=record.displaced, new=ptr(record)|THIN_TAG)
+  - 成功：T1 持有 thin lock
+  - 失败：走慢路径（可能自旋，必要时膨胀）
+```
+
+**(2) 同线程重入：通过“对象头是否指向我栈上记录”识别**
+
+- 如果对象头是 thin lock 且指向当前线程栈上的某条 lock record，那么这次进入属于**可重入**。
+- 典型实现会再压入一条 lock record 作为“重入层”，其 displaced header 可能写入特殊值，表示这层不负责恢复对象头。
+
+**(3) 退出：最外层负责恢复对象头**
+
+- 退出重入层：直接弹出对应的 lock record。
+- 退出最外层：CAS 尝试把对象头从 `ptr(record)|THIN_TAG` 改回 `record.displaced`（原始 Mark Word）。
+  - CAS 成功：解锁完成
+  - CAS 失败：说明期间发生了竞争/膨胀等，需要走慢路径（通常转交给 `ObjectMonitor`）
+
+**(4) 竞争：自旋失败就膨胀**
+
+- 线程 B 看到对象头指向“别的线程栈上的 lock record”时，B 不会去“读取/复用那条记录”来完成阻塞。
+- 常见策略是先短自旋；自旋失败、或遇到 `wait()`/JNI monitor 等必须走 monitor 的场景，就会膨胀成 `ObjectMonitor`，由它来维护 owner、重入次数、队列与唤醒。
+
 ---
 
 ### 4.3 新版本 HotSpot 的变化
@@ -542,6 +590,30 @@ Mark Word 是 HotSpot 对象头中的一部分，用来保存对象的运行时�
 - JDK 15：偏向锁默认关闭并被废弃，见 [JEP 374](https://openjdk.org/jeps/374)
 - JDK 18：偏向锁相关参数被废弃为无效，见 [JDK-8301897](https://bugs.openjdk.org/browse/JDK-8301897)
 - JDK 23：默认锁模式切到轻量级实现，见 [JDK-8327089](https://bugs.openjdk.org/browse/JDK-8327089)
+
+#### 4.3.1 为什么要移除偏向锁（Biased Locking）
+
+一句话概括偏向锁的目标：
+
+- **优化“无竞争 + 总是同一线程进入同一把锁”的场景**：在对象头里记录“偏向于线程 T”，让同线程反复进入时尽量不再做 CAS。
+
+但它后来逐步被默认关闭并退出主线，通常是因为：
+
+1. **收益变小（命中率下降）**
+   - 线程池/工作窃取/异步调度让“线程漂移”更常见，同一对象的锁更可能被多个线程轮流获取。
+   - 命中率下降后，偏向锁的优势被稀释，反而更容易频繁触发撤销。
+
+2. **撤销偏向的最坏代价高，容易劣化尾延迟**
+   - 偏向撤销往往需要和目标线程做协调（例如检查对应的栈帧记录，确保状态可安全转换）。
+   - 在某些竞争形态下会出现“偶发但很贵”的慢路径，影响 tail latency。
+
+3. **实现复杂、维护成本高**
+   - 对象头状态机与 JIT fast-path 分支变复杂。
+   - 需要和 identity hash、膨胀到 `ObjectMonitor`、GC 标记等对象头复用状态做更多交互处理。
+
+4. **替代优化更强**
+   - CPU 原子指令更快，轻量级/fast path（CAS + 短自旋）的相对成本下降。
+   - 逃逸分析 + 锁消除/锁粗化也让大量“看起来有锁”的代码运行时根本不需要进入 monitor。
 
 新 HotSpot 的一个重要演进是：
 
