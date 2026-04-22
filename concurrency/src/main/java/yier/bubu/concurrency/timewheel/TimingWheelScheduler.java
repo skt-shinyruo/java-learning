@@ -134,6 +134,17 @@ public final class TimingWheelScheduler implements AutoCloseable {
         }
     }
 
+    private void removeFromWheel(TimerTaskEntry entry) {
+        lock.lock();
+        try {
+            if (entry.list != null) {
+                entry.list.remove(entry);
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
     private void submit(TimerTaskEntry entry) {
         taskExecutor.execute(() -> {
             if (entry.isCancelled()) {
@@ -195,7 +206,11 @@ public final class TimingWheelScheduler implements AutoCloseable {
         @Override
         public boolean cancel() {
             // Task 1: cancellation is best-effort (removal semantics are added in Task 2).
-            return entry.cancel();
+            boolean first = entry.cancel();
+            if (first) {
+                scheduler.removeFromWheel(entry);
+            }
+            return first;
         }
 
         @Override
@@ -204,4 +219,3 @@ public final class TimingWheelScheduler implements AutoCloseable {
         }
     }
 }
-
