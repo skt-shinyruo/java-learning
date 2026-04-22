@@ -80,11 +80,123 @@ public final class TimingWheelScheduler implements AutoCloseable {
     }
 
     public ScheduledTask scheduleAtFixedRate(Runnable task, Duration initialDelay, Duration period) {
-        throw new UnsupportedOperationException("not implemented yet");
+        Objects.requireNonNull(task, "task");
+        long initialDelayNanos = Nanos.nonNegativeToNanos(initialDelay, "initialDelay");
+        long periodNanos = Nanos.positiveToNanos(period, "period");
+        if (shutdown) {
+            throw new RejectedExecutionException("scheduler is shutdown");
+        }
+
+        PeriodicTask periodic = new PeriodicTask(task, initialDelayNanos, periodNanos, 0L, PeriodicMode.FIXED_RATE);
+        periodic.scheduleFirst();
+        return periodic;
     }
 
     public ScheduledTask scheduleWithFixedDelay(Runnable task, Duration initialDelay, Duration delay) {
         throw new UnsupportedOperationException("not implemented yet");
+    }
+
+    private enum PeriodicMode {
+        FIXED_RATE,
+        FIXED_DELAY
+    }
+
+    private final class PeriodicTask implements ScheduledTask, Runnable {
+        private final Runnable userTask;
+        private final long initialDelayNanos;
+        private final long periodNanos;
+        private final long fixedDelayNanos;
+        private final PeriodicMode mode;
+
+        private final java.util.concurrent.atomic.AtomicBoolean cancelled = new java.util.concurrent.atomic.AtomicBoolean(false);
+
+        // For FIXED_RATE: the next target time (in nanos), updated after each run. Guarded by "this".
+        private long nextScheduledTimeNanos;
+
+        // The currently scheduled entry (if any). Used for best-effort cancellation of pending wheel entry.
+        private volatile TimerTaskEntry currentEntry;
+
+        private PeriodicTask(Runnable userTask,
+                             long initialDelayNanos,
+                             long periodNanos,
+                             long fixedDelayNanos,
+                             PeriodicMode mode) {
+            this.userTask = userTask;
+            this.initialDelayNanos = initialDelayNanos;
+            this.periodNanos = periodNanos;
+            this.fixedDelayNanos = fixedDelayNanos;
+            this.mode = mode;
+        }
+
+        private void scheduleFirst() {
+            long now = nanoTimeSupplier.getAsLong();
+            synchronized (this) {
+                this.nextScheduledTimeNanos = Nanos.addExact(now, initialDelayNanos, "now + initialDelay overflows");
+            }
+            this.currentEntry = scheduleInternal(this, initialDelayNanos);
+        }
+
+        @Override
+        public void run() {
+            if (cancelled.get()) {
+                return;
+            }
+            if (shutdown) {
+                // After shutdown, periodic tasks must not reschedule.
+                return;
+            }
+
+            try {
+                userTask.run();
+            } catch (Throwable t) {
+                // Align with ScheduledExecutorService: suppress subsequent executions.
+                cancelled.set(true);
+                t.printStackTrace();
+                return;
+            }
+
+            if (cancelled.get() || shutdown) {
+                return;
+            }
+
+            long now = nanoTimeSupplier.getAsLong();
+            long nextDelayNanos;
+            if (mode == PeriodicMode.FIXED_RATE) {
+                synchronized (this) {
+                    nextScheduledTimeNanos = Nanos.addExact(nextScheduledTimeNanos, periodNanos, "nextScheduledTime + period overflows");
+                    nextDelayNanos = Math.max(0L, nextScheduledTimeNanos - now);
+                }
+            } else {
+                nextDelayNanos = fixedDelayNanos;
+            }
+
+            currentEntry = scheduleInternal(this, nextDelayNanos);
+        }
+
+        @Override
+        public boolean cancel() {
+            if (!cancelled.compareAndSet(false, true)) {
+                return false;
+            }
+            TimerTaskEntry entry = currentEntry;
+            if (entry != null) {
+                // Mark cancelled and best-effort remove from wheel if still queued.
+                entry.cancel();
+                removeFromWheel(entry);
+            }
+            return true;
+        }
+
+        @Override
+        public boolean isCancelled() {
+            return cancelled.get();
+        }
+    }
+
+    private TimerTaskEntry scheduleInternal(Runnable task, long delayNanos) {
+        TimerTaskEntry entry = new TimerTaskEntry(task, computeExpiration(delayNanos));
+        addOrExecute(entry);
+        return entry;
     }
 
     void drain() {
