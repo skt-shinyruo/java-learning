@@ -5,9 +5,8 @@ import java.util.concurrent.DelayQueue;
 import java.util.function.LongSupplier;
 
 /**
- * One timing wheel level.
- *
- * <p>Task 1 implements only a single level. Overflow support is added later (Task 3).
+ * One timing wheel level. Tasks beyond this level's interval are stored in an overflow level whose
+ * tick is {@code intervalNanos}.
  */
 final class WheelLevel {
     private final long tickNanos;
@@ -16,8 +15,10 @@ final class WheelLevel {
 
     private final TimerTaskList[] buckets;
     private final DelayQueue<TimerTaskList> delayQueue;
+    private final LongSupplier nanoTimeSupplier;
 
     private long currentTimeNanos; // aligned down to tick
+    private WheelLevel overflow;
 
     WheelLevel(long tickNanos,
                int wheelSize,
@@ -28,6 +29,7 @@ final class WheelLevel {
         this.wheelSize = wheelSize;
         this.intervalNanos = Nanos.multiplyExact(tickNanos, (long) wheelSize, "tickNanos * wheelSize overflows");
         this.delayQueue = Objects.requireNonNull(delayQueue, "delayQueue");
+        this.nanoTimeSupplier = Objects.requireNonNull(nanoTimeSupplier, "nanoTimeSupplier");
 
         this.currentTimeNanos = Nanos.alignDown(startTimeNanos, tickNanos);
 
@@ -41,32 +43,36 @@ final class WheelLevel {
         long expirationNanos = entry.getExpirationNanos();
 
         if (expirationNanos < currentTimeNanos + tickNanos) {
-            // Due (or within the current tick window).
             return false;
         }
 
-        if (expirationNanos >= currentTimeNanos + intervalNanos) {
-            // Task 1 has no overflow wheel yet. We'll add hierarchical support in Task 3.
-            throw new IllegalArgumentException("delay is out of range for single-level wheel: expirationNanos=" + expirationNanos);
+        if (expirationNanos < currentTimeNanos + intervalNanos) {
+            long virtualId = expirationNanos / tickNanos;
+            int index = (int) Math.floorMod(virtualId, wheelSize);
+            TimerTaskList bucket = buckets[index];
+
+            bucket.add(entry);
+
+            long bucketExpiration = virtualId * tickNanos;
+            if (bucket.setExpirationNanos(bucketExpiration)) {
+                delayQueue.offer(bucket);
+            }
+            return true;
         }
 
-        long virtualId = expirationNanos / tickNanos;
-        int index = (int) Math.floorMod(virtualId, wheelSize);
-        TimerTaskList bucket = buckets[index];
-
-        bucket.add(entry);
-
-        long bucketExpiration = virtualId * tickNanos;
-        if (bucket.setExpirationNanos(bucketExpiration)) {
-            delayQueue.offer(bucket);
+        // Overflow: coarser tick = this interval.
+        if (overflow == null) {
+            overflow = new WheelLevel(intervalNanos, wheelSize, currentTimeNanos, delayQueue, nanoTimeSupplier);
         }
-        return true;
+        return overflow.add(entry);
     }
 
     void advanceClock(long timeNanos) {
         if (timeNanos >= currentTimeNanos + tickNanos) {
             currentTimeNanos = Nanos.alignDown(timeNanos, tickNanos);
+            if (overflow != null) {
+                overflow.advanceClock(currentTimeNanos);
+            }
         }
     }
 }
-
