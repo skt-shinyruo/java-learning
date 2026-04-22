@@ -73,6 +73,9 @@ nav:
           - JSR 133 Formalization: concurrency/content/references/jmm/jsr133.md
           - Java Memory Model Reference Page: concurrency/content/references/jmm/java-memory-model-reference-page.md
           - Double-Checked Locking Is Broken: concurrency/content/references/jmm/double-checked-locking-is-broken.md
+  - Distributed Transactions:
+      - Overview: distributed-transactions/index.md
+      - Seata AT Mode: distributed-transactions/content/seata-at-mode.md
   - Redis:
       - Overview: redis/index.md
       - GeoHash: redis/content/geohash.md
