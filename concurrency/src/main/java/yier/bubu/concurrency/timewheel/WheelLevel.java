@@ -46,6 +46,8 @@ final class WheelLevel {
             return false;
         }
 
+        // 关键不变量：只有 expiration < currentTime + interval 的任务才进入本层，
+        // 否则就交给 overflow（更粗粒度的 tick）存储，等时间推进后再下沉到更低层。
         if (expirationNanos < currentTimeNanos + intervalNanos) {
             long virtualId = expirationNanos / tickNanos;
             int index = (int) Math.floorMod(virtualId, wheelSize);
