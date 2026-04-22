@@ -1,10 +1,6 @@
-<!-- page 0069 -->
-
 ## 第2章　Java内存区域与内存溢出异常
 
 Java与C++之间有一堵由内存动态分配和垃圾收集技术所围成的高墙，墙外面的人想进去，墙里面的人却想出来。
-
-<!-- page 0070 -->
 
 ### 2.1　概述
 
@@ -14,8 +10,6 @@ Java与C++之间有一堵由内存动态分配和垃圾收集技术所围成的�
 
 本章是第二部分的第1章，笔者将从概念上介绍Java虚拟机内存的各个区域，讲解这些区域的作用、服务对象以及其中可能产生的问题，这也是翻越虚拟机内存管理这堵围墙的第一步。
 
-<!-- page 0071 -->
-
 ### 2.2　运行时数据区域
 
 Java虚拟机在执行Java程序的过程中会把它所管理的内存划分为若干个不同的数据区域。这些区域有各自的用途，以及创建和销毁的时间，有的区域随着虚拟机进程的启动而一直存在，有些区域则是依赖用户线程的启动和结束而建立和销毁。根据《Java虚拟机规范》的规定，Java虚拟机所管理的内存将会包括以下几个运行时数据区域，如图2-1所示。
@@ -23,8 +17,6 @@ Java虚拟机在执行Java程序的过程中会把它所管理的内存划分为
 ![第71页图片1](../images/page-0071-image-01.jpeg)
 
 图2-1　Java虚拟机运行时数据区
-
-<!-- page 0072 -->
 
 #### 2.2.1　程序计数器
 
@@ -37,8 +29,6 @@ Java虚拟机在执行Java程序的过程中会把它所管理的内存划分为
 如果线程正在执行的是一个Java方法，这个计数器记录的是正在执行的虚拟机字节码指令的地址；如果正在执行的是本地（Native）方法，这个计数器值则应为空（Undefined）。此内存区域是唯一一个在《Java虚拟机规范》中没有规定任何OutOfMemoryError情况的区域。
 
 [1] “概念模型”这个词会经常被提及，它代表了所有虚拟机的统一外观，但各款具体的Java虚拟机并不一定要完全照着概念模型的定义来进行设计，可能会通过一些更高效率的等价方式去实现它。
-
-<!-- page 0073 -->
 
 #### 2.2.2　Java虚拟机栈
 
@@ -56,18 +46,13 @@ Java虚拟机在执行Java程序的过程中会把它所管理的内存划分为
 
 拟机所允许的深度，将抛出StackOverflowError异常；如果Java虚拟机栈容量可以动态扩展[2]，当栈扩展时无法申请到足够的内存会抛出OutOfMemoryError异常。
 
-[1] 栈帧是方法运行期很重要的基础数据结构，在本书的第8章中还会对帧进行详细讲解。<br>
-[2] HotSpot虚拟机的栈容量是不可以动态扩展的，以前的Classic虚拟机倒是可以。所以在HotSpot虚拟机上是不会由于虚拟机栈无法扩展而导致OutOfMemoryError异常——只要线程申请栈空间成功了就不会有OOM，但是如果申请时就失败，仍然是会出现OOM异常的，后面的实战中笔者也演示了这种情况。本书第2版时这里的描述是有误的，请阅读过第2版的读者特别注意。
-
-<!-- page 0074 -->
+[1] 栈帧是方法运行期很重要的基础数据结构，在本书的第8章中还会对帧进行详细讲解。[2] HotSpot虚拟机的栈容量是不可以动态扩展的，以前的Classic虚拟机倒是可以。所以在HotSpot虚拟机上是不会由于虚拟机栈无法扩展而导致OutOfMemoryError异常——只要线程申请栈空间成功了就不会有OOM，但是如果申请时就失败，仍然是会出现OOM异常的，后面的实战中笔者也演示了这种情况。本书第2版时这里的描述是有误的，请阅读过第2版的读者特别注意。
 
 #### 2.2.3　本地方法栈
 
 本地方法栈（Native Method Stacks）与虚拟机栈所发挥的作用是非常相似的，其区别只是虚拟机栈为虚拟机执行Java方法（也就是字节码）服务，而本地方法栈则是为虚拟机使用到的本地（Native）方法服务。
 
-《Java虚拟机规范》对本地方法栈中方法使用的语言、使用方式与数据结构并没有任何强制规定，因此具体的虚拟机可以根据需要自由实现它，甚至有的Java虚拟机（譬如HotSpot虚拟机）直接就把本地方法栈和虚拟机栈合二为一。与虚拟机栈一样，本地方法栈也会在栈深度溢出或者栈扩展失败时分别抛出StackOverflowError和OutOfMemoryError异常。
-
-<!-- page 0075 -->
+《Java虚拟机规范》对本地方法栈中方法使用的语言、使用方式与数据结构并没有任何强制规定，因此具体的虚拟机可以根据需要自由实现它，甚至有的Java虚拟机（譬如Hot-Spot虚拟机）直接就把本地方法栈和虚拟机栈合二为一。与虚拟机栈一样，本地方法栈也会在栈深度溢出或者栈扩展失败时分别抛出StackOverflowError和OutOfMemoryError异常。
 
 #### 2.2.4　Java堆
 
@@ -87,15 +72,9 @@ Java堆是垃圾收集器管理的内存区域，因此一些资料中它也被�
 
 Java堆既可以被实现成固定大小的，也可以是可扩展的，不过当前主流的Java虚拟机都是按照可扩展来实现的（通过参数-Xmx和-Xms设定）。如果在Java堆中没有内存完成实例分配，并且堆也无法再扩展时，Java虚拟机将会抛出OutOfMemoryError异常。
 
-[1] 《Java虚拟机规范》中的原文：The heap is the runtime data area from which memory for all class instances and arrays is allocated。<br>
-[2] 逃逸分析与标量替换的相关内容，请参见第11章的相关内容。<br>
-[3] 指新生代（其中又包含一个Eden和两个Survivor）、老年代这种划分，源自UC Berkeley在20世纪80
-
-<!-- page 0076 -->
+[1] 《Java虚拟机规范》中的原文：The heap is the runtime data area from which memory for all class instances and arrays is allocated。[2] 逃逸分析与标量替换的相关内容，请参见第11章的相关内容。[3] 指新生代（其中又包含一个Eden和两个Survivor）、老年代这种划分，源自UC Berkeley在20世纪80
 
 年代中期开发的Berkeley Smalltalk。历史上有多款虚拟机采用了这种设计，包括HotSpot和它的前身Self和Strongtalk虚拟机（见第1章），原始论文是：https://dl.acm.org/citation.cfm?id=808261。
-
-<!-- page 0077 -->
 
 #### 2.2.5　方法区
 
@@ -111,8 +90,6 @@ Java堆既可以被实现成固定大小的，也可以是可扩展的，不过�
 
 [1] JEP 122-Remove the Permanent Generation：http://openjdk.java.net/jeps/122。
 
-<!-- page 0078 -->
-
 #### 2.2.6　运行时常量池
 
 运行时常量池（Runtime Constant Pool）是方法区的一部分。Class文件中除了有类的版本、字段、方法、接口等描述信息外，还有一项信息是常量池表（Constant Pool Table），用于存放编译期生成的各种字面量与符号引用，这部分内容将在类加载后存放到方法区的运行时常量池中。
@@ -127,8 +104,6 @@ Java虚拟机对于Class文件每一部分（自然也包括常量池）的格�
 
 [1] 关于Class文件格式、符号引用等概念可参见第6章。
 
-<!-- page 0079 -->
-
 #### 2.2.7　直接内存
 
 直接内存（Direct Memory）并不是虚拟机运行时数据区的一部分，也不是《Java虚拟机规范》中定义的内存区域。但是这部分内存也被频繁地使用，而且也可能导致OutOfMemoryError异常出现，所以我们放到这里一起讲解。
@@ -137,13 +112,9 @@ Java虚拟机对于Class文件每一部分（自然也包括常量池）的格�
 
 显然，本机直接内存的分配不会受到Java堆大小的限制，但是，既然是内存，则肯定还是会受到本机总内存（包括物理内存、SWAP分区或者分页文件）大小以及处理器寻址空间的限制，一般服务器管理员配置虚拟机参数时，会根据实际内存去设置-Xmx等参数信息，但经常忽略掉直接内存，使得各个内存区域总和大于物理内存限制（包括物理的和操作系统级的限制），从而导致动态扩展时出现OutOfMemoryError异常。
 
-<!-- page 0080 -->
-
 ### 2.3　HotSpot虚拟机对象探秘
 
 介绍完Java虚拟机的运行时数据区域之后，我们大致明白了Java虚拟机内存模型的概况，相信读者了解过内存中放了什么，也许就会更进一步想了解这些虚拟机内存中数据的其他细节，譬如它们是如何创建、如何布局以及如何访问的。对于这样涉及细节的问题，必须把讨论范围限定在具体的虚拟机和集中在某一个内存区域上才有意义。基于实用优先的原则，笔者以最常用的虚拟机HotSpot和最常用的内存区域Java堆为例，深入探讨一下HotSpot虚拟机在Java堆中对象分配、布局和访问的全过程。
-
-<!-- page 0081 -->
 
 #### 2.3.1　对象的创建
 
@@ -161,15 +132,13 @@ Java是一门面向对象的编程语言，Java程序运行过程中无时无刻
 
 接下来，Java虚拟机还要对对象进行必要的设置，例如这个对象是哪个类的实例、如何才能找到类的元数据信息、对象的哈希码（实际上对象的哈希码会延后到真正调用Object::hashCode()方法时才计算）、对象的GC分代年龄等信息。这些信息存放在对象的对象头（Object Header）之中。根据虚拟机当前运行状态的不同，如是否启用偏向锁等，对象头会有不同的设置方式。关于对象头的具体内容，稍后会详细介绍。
 
-<!-- page 0082 -->
-
 在上面工作都完成之后，从虚拟机的视角来看，一个新的对象已经产生了。但是从Java程序的视角看来，对象创建才刚刚开始——构造函数，即Class文件中的<init>()方法还没有执行，所有的字段都为默认的零值，对象需要的其他资源和状态信息也还没有按照预定的意图构造好。一般来说（由字节码流中new指令后面是否跟随invokespecial指令所决定，Java编译器会在遇到new关键字的地方同时生成这两条字节码指令，但如果直接通过其他方式产生的则不一定如此），new指令之后会接着执行<init>()方法，按照程序员的意愿对对象进行初始化，这样一个真正可用的对象才算完全被构造出来。
 
 下面代码清单2-1是HotSpot虚拟机字节码解释器（bytecodeInterpreter.cpp）中的代码片段。这个解释器实现很少有机会实际使用，大部分平台上都使用模板解释器；当代码通过即时编译器执行时差异就更大了。不过这段代码（以及笔者添加的注释）用于了解HotSpot的运作过程是没有什么问题的。
 
 代码清单2-1　HotSpot解释器代码片段
 
-```text
+```cpp
 // 确保常量池中存放的是已解释的类
 if (!constants->tag_at(index).is_unresolved_klass()) {
     // 断言确保是klassOop和instanceKlassOop（这部分下一节介绍）
@@ -198,7 +167,7 @@ retry:
             // cmpxchg是x86中的CAS指令，这里是一个C++方法，通过CAS方式分配空间，并发失败的
                话，转到retry中重试直至成功分配为止
             if (new_top <= *Universe::heap()->end_addr()) {
-                if (Atomic::cmpxchg_ptr(new_top, Universe::heap()->top_addr(), compare_to) != compare_to
+                if (Atomic::cmpxchg_ptr(new_top, Universe::heap()->top_addr(), compare_to) != compare_to) {
                     goto retry;
                 }
                 result = (oop) compare_to;
@@ -223,11 +192,6 @@ retry:
             result->set_klass(k_entry);
             // 将对象引用入栈，继续执行下一条指令
             SET_STACK_OBJECT(result, 0);
-```
-
-<!-- page 0083 -->
-
-```text
             UPDATE_PC_AND_TOS_AND_CONTINUE(3, 1);
         }
     }
@@ -235,8 +199,6 @@ retry:
 ```
 
 [1] 强调“理论上”是因为在CMS的实现里面，为了能在多数情况下分配得更快，设计了一个叫作Linear Allocation Buffer的分配缓冲区，通过空闲列表拿到一大块分配缓冲区之后，在它里面仍然可以使用指针碰撞方式来分配。
-
-<!-- page 0084 -->
 
 #### 2.3.2　对象的内存布局
 
@@ -256,17 +218,12 @@ HotSpot虚拟机对象的对象头部分包括两类信息。第一类是用于�
 
 代码清单2-2　markOop.cpp片段
 
-```text
+```cpp
 // Bit-format of an object header (most significant first, big endian layout below):
 //
 //  32 bits:
 //  --------
 //  hash:25 ------------>| age:4    biased_lock:1 lock:2 (normal object)
-```
-
-<!-- page 0085 -->
-
-```text
 //  JavaThread*:23 epoch:2 age:4    biased_lock:1 lock:2 (biased object)
 //  size:32 ------------------------------------------>| (CMS free block)
 //  PromotedObject*:29 ---------->| promo_bits:3 ----->| (CMS promoted object)
@@ -277,8 +234,6 @@ HotSpot虚拟机对象的对象头部分包括两类信息。第一类是用于�
 对象的第三部分是对齐填充，这并不是必然存在的，也没有特别的含义，它仅仅起着占位符的作用。由于HotSpot虚拟机的自动内存管理系统要求对象起始地址必须是8字节的整数倍，换句话说就是任何对象的大小都必须是8字节的整数倍。对象头部分已经被精心设计成正好是8字节的倍数（1倍或者2倍），因此，如果对象实例数据部分没有对齐的话，就需要通过对齐填充来补全。
 
 [1] 关于轻量级锁、重量级锁等信息，可参见本书第13章的相关内容。
-
-<!-- page 0086 -->
 
 #### 2.3.3　对象的访问定位
 
@@ -294,15 +249,11 @@ HotSpot虚拟机对象的对象头部分包括两类信息。第一类是用于�
 
 图2-2　通过句柄访问对象
 
-<!-- page 0087 -->
-
 ![第87页图片1](../images/page-0087-image-01.jpeg)
 
 图2-3　通过直接指针访问对象
 
 使用直接指针来访问最大的好处就是速度更快，它节省了一次指针定位的时间开销，由于对象访问在Java中非常频繁，因此这类开销积少成多也是一项极为可观的执行成本，就本书讨论的主要虚拟机HotSpot而言，它主要使用第二种方式进行对象访问（有例外情况，如果使用了Shenandoah收集器的话也会有一次额外的转发，具体可参见第3章），但从整个软件开发的范围来看，在各种语言、框架中使用句柄来访问的情况也十分常见。
-
-<!-- page 0088 -->
 
 ### 2.4　实战：OutOfMemoryError异常
 
@@ -312,15 +263,11 @@ HotSpot虚拟机对象的对象头部分包括两类信息。第一类是用于�
 
 本节代码清单开头都注释了执行时需要设置的虚拟机启动参数（注释中“VM Args”后面跟着的参数），这些参数对实验的结果有直接影响，请读者调试代码的时候不要忽略掉。如果读者使用控制台命令来执行程序，那直接跟在Java命令之后书写就可以。如果读者使用Eclipse，则可以参考图2-4在Debug/Run页签中的设置，其他IDE工具均有类似的设置。
 
-<!-- page 0089 -->
-
 ![第89页图片1](../images/page-0089-image-01.jpeg)
 
 图2-4　在Eclipse的Debug页签中设置虚拟机参数
 
 本节所列的代码均由笔者在基于OpenJDK 7中的HotSpot虚拟机上进行过实际测试，如无特殊说明，对其他OpenJDK版本也应当适用。不过读者需意识到内存溢出异常与虚拟机本身的实现细节密切相关，并非全是Java语言中约定的公共行为。因此，不同发行商、不同版本的Java虚拟机，其需要的参数和程序运行的结果都很可能会有所差别。
-
-<!-- page 0090 -->
 
 #### 2.4.1　Java堆溢出
 
@@ -332,25 +279,16 @@ Java堆用于储存对象实例，我们只要不断地创建对象，并且保�
 
 代码清单2-3　Java堆内存溢出异常测试
 
-```text
+```java
 /**
  * VM Args：-Xms20m -Xmx20m -XX:+HeapDumpOnOutOfMemoryError
  * @author zzm
  */
 public class HeapOOM {
-```
-
-```text
     static class OOMObject {
     }
-```
-
-```text
     public static void main(String[] args) {
         List<OOMObject> list = new ArrayList<OOMObject>();
-```
-
-```text
         while (true) {
             list.add(new OOMObject());
         }
@@ -360,7 +298,7 @@ public class HeapOOM {
 
 运行结果：
 
-```text
+```bash
 java.lang.OutOfMemoryError: Java heap space
 Dumping heap to java_pid3404.hprof ...
 Heap dump file created [22045981 bytes in 0.663 secs]
@@ -372,8 +310,6 @@ Java堆内存的OutOfMemoryError异常是实际应用中最常见的内存溢出
 
 如果是内存泄漏，可进一步通过工具查看泄漏对象到GC Roots的引用链，找到泄漏对象是通过怎样的引用路径、与哪些GC Roots相关联，才导致垃圾收集器无法回收它们，根据泄漏对象的类型信息以及它到GC Roots引用链的信息，一般可以比较准确地定位到这些对象创建的位置，进而找出产生内存泄漏的代码的具体位置。
 
-<!-- page 0091 -->
-
 ![第91页图片1](../images/page-0091-image-01.jpeg)
 
 图2-5　使用Eclipse Memory Analyzer打开的堆转储快照文件
@@ -383,8 +319,6 @@ Java堆内存的OutOfMemoryError异常是实际应用中最常见的内存溢出
 以上是处理Java堆内存问题的简略思路，处理这些问题所需要的知识、工具与经验是后面三章的主题，后面我们将会针对具体的虚拟机实现、具体的垃圾收集器和具体的案例来进行分析，这里就先暂不展开。
 
 [1] 关于堆转储快照文件分析方面的内容，可参见第4章。
-
-<!-- page 0092 -->
 
 #### 2.4.2　虚拟机栈和本地方法栈溢出
 
@@ -410,26 +344,17 @@ Java堆内存的OutOfMemoryError异常是实际应用中最常见的内存溢出
 
 代码清单2-4　虚拟机栈和本地方法栈测试（作为第1点测试程序）
 
-```text
+```java
 /**
  * VM Args：-Xss128k
  * @author zzm
  */
 public class JavaVMStackSOF {
-```
-
-```text
     private int stackLength = 1;
-```
-
-```text
     public void stackLeak() {
         stackLength++;
         stackLeak();
     }
-```
-
-```text
     public static void main(String[] args) throws Throwable {
         JavaVMStackSOF oom = new JavaVMStackSOF();
         try {
@@ -439,11 +364,6 @@ public class JavaVMStackSOF {
             throw e;
         }
     }
-```
-
-<!-- page 0093 -->
-
-```text
 }
 ```
 
@@ -468,15 +388,12 @@ The Java thread stack size specified is too small. Specify at least 228k
 
 代码清单2-5　虚拟机栈和本地方法栈测试（作为第2点测试程序）
 
-```text
+```java
 /**
  * @author zzm
  */
 public class JavaVMStackSOF {
     private static int stackLength = 0;
-```
-
-```text
     public static void test() {
         long unused1, unused2, unused3, unused4, unused5,
              unused6, unused7, unused8, unused9, unused10,
@@ -498,24 +415,13 @@ public class JavaVMStackSOF {
              unused86, unused87, unused88, unused89, unused90,
              unused91, unused92, unused93, unused94, unused95,
              unused96, unused97, unused98, unused99, unused100;
-```
-
-```text
         stackLength ++;
         test();
-```
-
-```text
         unused1 = unused2 = unused3 = unused4 = unused5 =
         unused6 = unused7 = unused8 = unused9 = unused10 =
         unused11 = unused12 = unused13 = unused14 = unused15 =
         unused16 = unused17 = unused18 = unused19 = unused20 =
         unused21 = unused22 = unused23 = unused24 = unused25 =
-```
-
-<!-- page 0094 -->
-
-```text
         unused26 = unused27 = unused28 = unused29 = unused30 =
         unused31 = unused32 = unused33 = unused34 = unused35 =
         unused36 = unused37 = unused38 = unused39 = unused40 =
@@ -532,9 +438,6 @@ public class JavaVMStackSOF {
         unused91 = unused92 = unused93 = unused94 = unused95 =
         unused96 = unused97 = unused98 = unused99 = unused100 = 0;
     }
-```
-
-```text
     public static void main(String[] args) {
         try {
             test();
@@ -572,28 +475,20 @@ java.lang.OutOfMemoryError
 
 原因其实不难理解，操作系统分配给每个进程的内存是有限制的，譬如32位Windows的单个进程最大内存限制为2GB。HotSpot虚拟机提供了参数可以控制Java堆和方法区这两部分的内存的最大值，
 
-<!-- page 0095 -->
-
 那剩余的内存即为2GB（操作系统限制）减去最大堆容量，再减去最大方法区容量，由于程序计数器消耗内存很小，可以忽略掉，如果把直接内存和虚拟机进程本身耗费的内存也去掉的话，剩下的内存就由虚拟机栈和本地方法栈来分配了。因此为每个线程分配到的栈内存越大，可以建立的线程数量自然就越少，建立线程时就越容易把剩下的内存耗尽，代码清单2-6演示了这种情况。
 
 代码清单2-6　创建线程导致内存溢出异常
 
-```text
+```java
 /**
  * VM Args：-Xss2M （这时候不妨设大些，请在32位系统下运行）
  * @author zzm
  */
 public class JavaVMStackOOM {
-```
-
-```text
     private void dontStop() {
         while (true) {
         }
     }
-```
-
-```text
     public void stackLeakByThread() {
         while (true) {
             Thread thread = new Thread(new Runnable() {
@@ -605,9 +500,6 @@ public class JavaVMStackOOM {
             thread.start();
         }
     }
-```
-
-```text
     public static void main(String[] args) throws Throwable {
         JavaVMStackOOM oom = new JavaVMStackOOM();
         oom.stackLeakByThread();
@@ -629,13 +521,9 @@ Exception in thread "main" java.lang.OutOfMemoryError: unable to create native t
 
 出现StackOverflowError异常时，会有明确错误堆栈可供分析，相对而言比较容易定位到问题所在。如果使用HotSpot虚拟机默认参数，栈深度在大多数情况下（因为每个方法压入栈的帧大小并不是一样的，所以只能说大多数情况下）到达1000~2000是完全没有问题，对于正常的方法调用（包括不能做尾递归优化的递归调用），这个深度应该完全够用了。但是，如果是建立过多线程导致的内存溢出，在不能减少线程数量或者更换64位虚拟机的情况下，就只能通过减少最大堆和减少栈容量来换取更多的线程。这种通过“减少内存”的手段来解决内存溢出的方式，如果没有这方面处理经验，一般比较难以想到，这一点读者需要在开发32位系统的多线程应用时注意。也是由于这种问题较为隐蔽，从JDK 7起，以上提示信息中“unable to create native thread”后面，虚拟机会特别注明原因可能是“possibly
 
-<!-- page 0096 -->
-
 out of memory or process/resource limits reached”。
 
 [1] 关于虚拟机线程实现方面的内容可以参考本书第12章。
-
-<!-- page 0097 -->
 
 #### 2.4.3　方法区和运行时常量池溢出
 
@@ -645,15 +533,12 @@ String::intern()是一个本地方法，它的作用是如果字符串常量池�
 
 代码清单2-7　运行时常量池导致的内存溢出异常
 
-```text
+```java
 /**
  * VM Args：-XX:PermSize=6M -XX:MaxPermSize=6M
  * @author zzm
  */
 public class RuntimeConstantPoolOOM {
-```
-
-```text
     public static void main(String[] args) {
         // 使用Set保持着常量池引用，避免Full GC回收常量池行为
         Set<String> set = new HashSet<String>();
@@ -680,17 +565,12 @@ Exception in thread "main" java.lang.OutOfMemoryError: PermGen space
 
 样限制在6MB，也都不会重现JDK 6中的溢出异常，循环将一直进行下去，永不停歇[1]。出现这种变化，是因为自JDK 7起，原本存放在永久代的字符串常量池被移至Java堆之中，所以在JDK 7及以上版本，限制方法区的容量对该测试用例来说是毫无意义的。这时候使用-Xmx参数限制最大堆到6MB就能够看到以下两种运行结果之一，具体取决于哪里的对象分配时产生了溢出：
 
-<!-- page 0098 -->
-
 ```text
 // OOM异常一：
 Exception in thread "main" java.lang.OutOfMemoryError: Java heap space
     at java.base/java.lang.Integer.toString(Integer.java:440)
     at java.base/java.lang.String.valueOf(String.java:3058)
     at RuntimeConstantPoolOOM.main(RuntimeConstantPoolOOM.java:12)
-```
-
-```text
 // OOM异常二：
 Exception in thread "main" java.lang.OutOfMemoryError: Java heap space
     at java.base/java.util.HashMap.resize(HashMap.java:699)
@@ -704,17 +584,11 @@ Exception in thread "main" java.lang.OutOfMemoryError: Java heap space
 
 代码清单2-8　String.intern()返回引用的测试
 
-```text
+```java
 public class RuntimeConstantPoolOOM {
-```
-
-```text
     public static void main(String[] args) {
         String str1 = new StringBuilder("计算机").append("软件").toString();
         System.out.println(str1.intern() == str1);
-```
-
-```text
         String str2 = new StringBuilder("ja").append("va").toString();
         System.out.println(str2.intern() == str2);
     }
@@ -733,37 +607,29 @@ public class RuntimeConstantPoolOOM {
 
 值得特别注意的是，我们在这个例子中模拟的场景并非纯粹是一个实验，类似这样的代码确实可能会出现在实际应用中：当前的很多主流框架，如Spring、Hibernate对类进行增强时，都会使用到CGLib这类字节码技术，当增强的类越多，就需要越大的方法区以保证动态生成的新类型可以载入内
 
-<!-- page 0099 -->
-
 存。另外，很多运行于Java虚拟机上的动态语言（例如Groovy等）通常都会持续创建新类型来支撑语言的动态性，随着这类动态语言的流行，与代码清单2-9相似的溢出场景也越来越容易遇到。
 
 代码清单2-9　借助CGLib使得方法区出现内存溢出异常
 
-```text
+```java
 /**
  * VM Args：-XX:PermSize=10M -XX:MaxPermSize=10M
  * @author zzm
  */
 public class JavaMethodAreaOOM {
-```
-
-```text
     public static void main(String[] args) {
         while (true) {
             Enhancer enhancer = new Enhancer();
             enhancer.setSuperclass(OOMObject.class);
             enhancer.setUseCache(false);
             enhancer.setCallback(new MethodInterceptor() {
-                public Object intercept(Object obj, Method method, Object[] args, MethodProxy proxy) thr
+                public Object intercept(Object obj, Method method, Object[] args, MethodProxy proxy) throws Throwable {
                     return proxy.invokeSuper(obj, args);
                 }
             });
             enhancer.create();
         }
     }
-```
-
-```text
     static class OOMObject {
     }
 }
@@ -787,17 +653,11 @@ Caused by: java.lang.OutOfMemoryError: PermGen space
 
 ·-XX：MetaspaceSize：指定元空间的初始空间大小，以字节为单位，达到该值就会触发垃圾收集进行类型卸载，同时收集器会对该值进行调整：如果释放了大量的空间，就适当降低该值；如果释放了很少的空间，那么在不超过-XX：MaxMetaspaceSize（如果设置了的话）的情况下，适当提高该
 
-<!-- page 0100 -->
-
 值。
 
 ·-XX：MinMetaspaceFreeRatio：作用是在垃圾收集之后控制最小的元空间剩余容量的百分比，可减少因为元空间不足导致的垃圾收集的频率。类似的还有-XX：Max-MetaspaceFreeRatio，用于控制最大的元空间剩余容量的百分比。
 
-[1] 正常情况下是永不停歇的，如果机器内存紧张到连几MB的Java堆都挤不出来的这种极端情况就不讨论了。<br>
-[2] 它是在加载sun.misc.Version这个类的时候进入常量池的。本书第2版并未解释java这个字符串此前是哪里出现的，所以被批评“挖坑不填了”（无奈地摊手）。如读者感兴趣是如何找出来的，可参考Red-naxelaFX的知乎回答（https://www.zhihu.com/question/51102308/answer/124441115）。<br>
-[3] CGLib开源项目：http://cglib.sourceforge.net/。
-
-<!-- page 0101 -->
+[1] 正常情况下是永不停歇的，如果机器内存紧张到连几MB的Java堆都挤不出来的这种极端情况就不讨论了。[2] 它是在加载sun.misc.Version这个类的时候进入常量池的。本书第2版并未解释java这个字符串此前是哪里出现的，所以被批评“挖坑不填了”（无奈地摊手）。如读者感兴趣是如何找出来的，可参考Red-naxelaFX的知乎回答（https://www.zhihu.com/question/51102308/answer/124441115）。[3] CGLib开源项目：http://cglib.sourceforge.net/。
 
 #### 2.4.4　本机直接内存溢出
 
@@ -805,19 +665,13 @@ Caused by: java.lang.OutOfMemoryError: PermGen space
 
 代码清单2-10　使用unsafe分配本机内存
 
-```text
+```java
 /**
  * VM Args：-Xmx20M -XX:MaxDirectMemorySize=10M
  * @author zzm
  */
 public class DirectMemoryOOM {
-```
-
-```text
     private static final int _1MB = 1024 * 1024;
-```
-
-```text
     public static void main(String[] args) throws Exception {
         Field unsafeField = Unsafe.class.getDeclaredFields()[0];
         unsafeField.setAccessible(true);
@@ -838,8 +692,6 @@ Exception in thread "main" java.lang.OutOfMemoryError
 ```
 
 由直接内存导致的内存溢出，一个明显的特征是在Heap Dump文件中不会看见有什么明显的异常情况，如果读者发现内存溢出之后产生的Dump文件很小，而程序中又直接或间接使用了DirectMemory（典型的间接使用就是NIO），那就可以考虑重点检查一下直接内存方面的原因了。
-
-<!-- page 0102 -->
 
 ### 2.5　本章小结
 

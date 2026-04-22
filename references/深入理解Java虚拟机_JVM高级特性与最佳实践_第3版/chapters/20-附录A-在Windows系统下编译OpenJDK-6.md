@@ -1,20 +1,14 @@
-<!-- page 0659 -->
-
 ## 附录A　在Windows系统下编译OpenJDK 6
 
 这是本书第1版中介绍如何在Windows下编译OpenJDK 6的例子，里面的部分内容现在已经过时了（例如安装Plug部分），但对在Windows上构建安装环境和进行较老版本的OpenJDK编译还是有一定参考意义的，所以笔者并没有把它删除，而是挪到附录之中。
 
-<!-- page 0660 -->
-
-### A.1　获取JDK源码
+A.1　获取JDK源码
 
 首先确定要使用的JDK版本，OpenJDK 6和OpenJDK 7都是开源的，源码都可以在它们的主页（http://openjdk.java.net/）上找到。OpenJDK 6的源码其实是从OpenJDK 7的某个基线中引出的，然后剥离JDK 1.7相关的代码，从而得到一份可以通过TCK 6的JDK 1.6实现，因此直接编译OpenJDK 7会更加“原汁原味”一些，其实这两个版本的编译过程差异并不大。
 
 获取源码有两种方式：一是通过Mercurial代码版本管理工具从Repository中直接取得源码（Repository地址：http://hg.openjdk.java.net/jdk7/jdk7），这是最直接的方式，从版本管理中看变更轨迹比看什么Release Note都来得实在，不过太麻烦了一些，尤其是Mercurial远不如SVN、ClearCase或CVS之类的版本控制工具那样普及；另外一种就是直接下载官方打包好的源码包了，可以从Source Releases页面（地址：http://download.java.net/openjdk/jdk7/）取得打包好的源码，一般来说大概一个月左右会更新一次，虽然不够及时，但的确方便了许多。笔者下载的是OpenJDK 7 Early Access Source Build b121版，2010年12月9日发布的，大概81.7MB，解压出来约308MB。
 
-<!-- page 0661 -->
-
-### A.2　系统需求
+A.2　系统需求
 
 如果可能，笔者建议尽量在Linux或Solaris上构建OpenJDK，这要比在Windows平台上轻松许多，而且网上能找到的资料绝大部分都是在Linux上编译的。如果一定要在Windows平台上编译，建议读者认真阅读一下源码中的README-builds.html文档（无论在OpenJDK网站上还是在下载的源码包里面都有这份文档），因为编译过程中需要注意的细节非常多。虽然不至于像文档上所描述的“Building the source code for the JDK requires a high level of technical expertise.Sun provides the source code primarily for technical experts who want to conduct research（编译JDK需要很高的专业技术，Sun提供JDK源码是为了供技术专家进行研究之用）”那么夸张，但是如果读者是第一次编译，那在上面耗费一整天乃至更多的时间都很正常。
 
@@ -22,9 +16,7 @@
 
 对系统的最后一点要求就是所有的文件，包括源码和依赖项目，都不要放在包含中文或空格的目录里面，这样做不是一定不可以，只是这样会为后续建立CYGWIN环境带来很多额外的工作。这是由于Linux和Windows的磁盘路径差别所导致的，我们也没有必要自己给自己找麻烦。
 
-<!-- page 0662 -->
-
-### A.3　构建编译环境
+A.3　构建编译环境
 
 准备编译环境的第一步是安装一个CYGWIN[1]。这是一个在Windows平台下模拟Linux运行环境的软件，提供了一系列的Linux命令支持。需要CYGWIN的原因是，在编译中要使用GNU Make来执行Makefile文件（C/C++程序员肯定很熟悉，如果只使用Java，那把这个东西当成C++版本的ANT看待就可以了）。安装CYGWIN时不能直接默认安装，因为表A-1中所示的工具都不会进行默认安装，但又是编译过程中需要的，因此要在图A-1所示的安装界面中进行手工选择。
 
@@ -33,8 +25,6 @@ CYGWIN安装时的定制包选择界面如图A-1所示。
 表A-1　需要手工选择安装的CYGWIN工具
 
 ![第662页图片1](../images/page-0662-image-01.jpeg)
-
-<!-- page 0663 -->
 
 ![第663页图片1](../images/page-0663-image-01.jpeg)
 
@@ -46,27 +36,21 @@ CYGWIN安装时的定制包选择界面如图A-1所示。
 
 准备JDK编译环境的第三步就是下载一个已经编译好的JDK。这听起来也许有点滑稽——要用鸡蛋孵小鸡还真得必须先养一只母鸡呀？但仔细想想，其实这个步骤很合理：因为JDK包含的各个部分
 
-<!-- page 0664 -->
-
 （Hotspot、JDK API、JAXWS、JAXP……）有的是使用C++编写的，而更多的代码则是使用Java自身实现的，因此编译这些Java代码需要用到一个可用的JDK，官方称这个JDK为Bootstrap JDK。而编译OpenJDK 7的话，Bootstrap JDK必须使用JDK6 Update 14或之后的版本，笔者选用的是JDK6 Update 21。
 
 最后一个步骤是下载一个Apache ANT，JDK中Java代码部分都是使用ANT脚本进行编译的，ANT版本要求在1.6.5以上，这部分是Java的基础知识，对本书的读者来说应该没有难度，笔者不再详述。
 
-<!-- page 0665 -->
-
-### A.4　准备依赖项
+A.4　准备依赖项
 
 前面说过，OpenJDK中开放的源码并没有达到100%，还有极少量的无法开源的产权代码存在。OpenJDK承诺日后将逐步使用开源实现来替换掉这部分产权代码，但至少在今天，编译JDK还需要这
 
 部分闭源包，官方称之为“JDK Plug”[2]，它们从前面的Source Releases页面就可以下载到。Windows平台的JDK Plug是以Jar包的形式提供的，通过下面这条命令可以安装它：
 
-```text
+```bash
 java –jar jdk-7-ea-plug-b121-windows-i586-09_dec_2010.jar
 ```
 
 运行后将会显示图A-2所示的协议，点击“ACCEPT”接受协议，然后把Plug安装到指定目录即可。安装完毕后建立一个环境变量ALT_BINARY_PLUGS_PATH，变量值为此JDK Plug的安装路径，后面编译程序时需要用到它。
-
-<!-- page 0666 -->
 
 ![第666页图片1](../images/page-0666-image-01.jpeg)
 
@@ -80,9 +64,7 @@ java –jar jdk-7-ea-plug-b121-windows-i586-09_dec_2010.jar
 
 最后，寻找一个名为MSVCR100.DLL的动态链接库，如果读者在前面安装了全套的Visual Studio 2010，那这个文件在本机就能找到，否则上网搜索一下也能找到单独的下载地址，大概有744KB。建立环境变量ALT_MSVCRNN_DLL_PATH指向这个文件所在的目录。如果读者选择的是VS2003，这个文件名应当为MSVCR73.DLL，应该在很多软件中都包含有这个文件，如果找不到的话，前面下载的Bootstrap JDK的bin目录中应该也有一个，直接拿来用吧。
 
-<!-- page 0667 -->
-
-### A.5　进行编译
+A.5　进行编译
 
 现在需要下载的编译环境和依赖项目都准备齐全了，最后我们还需要对系统做一些设置以便编译能够顺利通过。
 
@@ -92,7 +74,7 @@ java –jar jdk-7-ea-plug-b121-windows-i586-09_dec_2010.jar
 
 代码清单A-1　环境变量设置
 
-```text
+```bat
 SET ALT_BOOTDIR=D:/_DevSpace/JDK 1.6.0_21
 SET ALT_BINARY_PLUGS_PATH=D:/jdkBuild/jdk7plug/openjdk-binary-plugs
 SET ALT_JDK_IMPORT_PATH=D:/_DevSpace/JDK 1.6.0_21
@@ -102,13 +84,10 @@ SET ALT_DXSDK_PATH=D:/jdkBuild/msdxsdk
 SET ALT_COMPILER_PATH=D:/jdkBuild/vcpp2010.x86/bin
 SET ALT_FREETYPE_HEADERS_PATH=D:/jdkBuild/freetype-2.3.5-1-bin/include
 SET ALT_FREETYPE_LIB_PATH=D:/jdkBuild/freetype-2.3.5-1-bin/bin
-```
-
-```text
 SET INCLUDE=D:/jdkBuild/vcpp2010.x86/include;D:/jdkBuild/vcpp2010.x86/sdk/Include;%INCLUDE%
 SET LIB=D:/jdkBuild/vcpp2010.x86/lib;D:/jdkBuild/vcpp2010.x86/sdk/Lib;%LIB%
 SET LIBPATH=D:/jdkBuild/vcpp2010.x86/lib;%LIB%
-SET PATH=D:/jdkBuild/vcpp2010.x86/bin;D:/jdkBuild/vcpp2010.x86/dll/x86;D:/Software/OpenSource/cygwin/bin
+SET PATH=D:/jdkBuild/vcpp2010.x86/bin;D:/jdkBuild/vcpp2010.x86/dll/x86;D:/Software/OpenSource/cygwin/bin;%ALT_FREETYPE_LIB_PATH%;%PATH%
 ```
 
 最后还需要进行两项调整，官方文档没有说明这两项，但是必须要做完才能保证编译过程的顺利完成：一是取消环境变量JAVA_HOME，这点很简单；另外一项是尽量在英文的操作系统上编译。估计大部分读者会感到比较为难吧？如果不能在英文的系统上编译就把系统的文字格式调整为“英语（美国）”，在控制面板-区域和语言选项的第一个页签中可以设置。如果这个设置还不能更改就建立一个BUILD_CORBA环境变量，将其值设置为false，取消编译CORBA部分。否则Java IDL（idlj.exe）为*.idl文件生成CORBA适配器代码的时候会产生中文注释，而这些中文注释会因为字符集的问题而导致编译失败。
@@ -117,13 +96,8 @@ SET PATH=D:/jdkBuild/vcpp2010.x86/bin;D:/jdkBuild/vcpp2010.x86/dll/x86;D:/Softwa
 
 代码清单A-2　make sanity检查
 
-```text
+```bat
 D:\jdkBuild\openjdk7>bash
-```
-
-<!-- page 0668 -->
-
-```text
 bash-3.2$ make sanity
 cygwin warning:
     MS-DOS style path detected: C:/Windows/system32/wscript.exe
@@ -132,21 +106,12 @@ cygwin warning:
     Consult the user's guide for more details about POSIX paths:
         http://cygwin.com/cygwin-ug-net/using.html#using-pathnames
 ( cd  ./jdk/make && \
-```
-
-```text
 ……因篇幅关系，中间省略了大量的输出内容……
-```
-
-```text
 OpenJDK-specific settings:
     FREETYPE_HEADERS_PATH = D:/jdkBuild/freetype-2.3.5-1-bin/include
         ALT_FREETYPE_HEADERS_PATH = D:/jdkBuild/freetype-2.3.5-1-bin/include
     FREETYPE_LIB_PATH = D:/jdkBuild/freetype-2.3.5-1-bin/bin
         ALT_FREETYPE_LIB_PATH = D:/jdkBuild/freetype-2.3.5-1-bin/bin
-```
-
-```text
 OPENJDK Import Binary Plug Settings:
     IMPORT_BINARY_PLUGS = true
     BINARY_PLUGS_JARFILE = D:/jdkBuild/jdk7plug/openjdk-binary-plugs/jre/lib/rt-closed.jar
@@ -156,9 +121,6 @@ OPENJDK Import Binary Plug Settings:
     BUILD_BINARY_PLUGS_PATH = J:/re/jdk/1.7.0/promoted/latest/openjdk/binaryplugs
         ALT_BUILD_BINARY_PLUGS_PATH =
     PLUG_LIBRARY_NAMES =
-```
-
-```text
 Previous JDK Settings:
     PREVIOUS_RELEASE_PATH = USING-PREVIOUS_RELEASE_IMAGE
         ALT_PREVIOUS_RELEASE_PATH =
@@ -177,6 +139,4 @@ Makefile的Sanity检查过程输出了编译所需的所有环境变量，如果
 
 编译完成之后，打开OpenJDK源码下的build目录，看看是不是已经有一个编译好的JDK在那里等着了？执行一下“java-version”，看到以自己机器命名的JDK了吧？很有成就感吧？
 
-[1] CYGWIN下载地址：http://www.cygwin.com/。<br>
-[2] 在2011年，JDK Plug已经不再需要了，但在笔者写本次实战使用的2010年12月9日发布的OpenJDK b121版时还是需要这些JDK Plug的。<br>
-[3] FreeType主页：http://www.freetype.org/。
+[1] CYGWIN下载地址：http://www.cygwin.com/。[2] 在2011年，JDK Plug已经不再需要了，但在笔者写本次实战使用的2010年12月9日发布的OpenJDK b121版时还是需要这些JDK Plug的。[3] FreeType主页：http://www.freetype.org/。

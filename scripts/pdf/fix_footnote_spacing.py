@@ -4,7 +4,6 @@ from pathlib import Path
 
 
 BOOK_DIR = Path("references/深入理解Java虚拟机_JVM高级特性与最佳实践_第3版")
-MAIN_MD = BOOK_DIR / "深入理解Java虚拟机_JVM高级特性与最佳实践_第3版.md"
 CHAPTERS_DIR = BOOK_DIR / "chapters"
 
 FOOTNOTE_LINE_RE = re.compile(r"^\[\d+\]")
@@ -70,7 +69,7 @@ def fix_file(path: Path) -> bool:
 
 
 def main() -> None:
-    paths = [MAIN_MD] + [p for p in sorted(CHAPTERS_DIR.glob("*.md")) if p.name != "README.md"]
+    paths = [p for p in sorted(CHAPTERS_DIR.glob("*.md")) if p.name != "README.md"]
     changed = [p for p in paths if fix_file(p)]
     print(f"changed_files {len(changed)}")
     for p in changed:
@@ -79,4 +78,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

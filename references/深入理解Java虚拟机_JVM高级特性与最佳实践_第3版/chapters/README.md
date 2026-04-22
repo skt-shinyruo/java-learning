@@ -1,6 +1,12 @@
 # 章节拆分
 
-源文件：[深入理解Java虚拟机_JVM高级特性与最佳实践_第3版.md](../深入理解Java虚拟机_JVM高级特性与最佳实践_第3版.md)
+这里保留的是按章节拆分后的 Markdown 文档。
+
+如需重新从 PDF 生成章节，请在仓库根目录执行：
+
+```bash
+python3 scripts/pdf/generate_jvm_book_chapters.py
+```
 
 ## 文件列表
 
