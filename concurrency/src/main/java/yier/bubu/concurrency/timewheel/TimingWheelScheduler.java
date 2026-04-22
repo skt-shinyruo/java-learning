@@ -150,10 +150,6 @@ public final class TimingWheelScheduler implements AutoCloseable {
             if (cancelled.get()) {
                 return;
             }
-            if (shutdown) {
-                // After shutdown, periodic tasks must not reschedule.
-                return;
-            }
 
             try {
                 userTask.run();
