@@ -93,7 +93,16 @@ public final class TimingWheelScheduler implements AutoCloseable {
     }
 
     public ScheduledTask scheduleWithFixedDelay(Runnable task, Duration initialDelay, Duration delay) {
-        throw new UnsupportedOperationException("not implemented yet");
+        Objects.requireNonNull(task, "task");
+        long initialDelayNanos = Nanos.nonNegativeToNanos(initialDelay, "initialDelay");
+        long fixedDelayNanos = Nanos.positiveToNanos(delay, "delay");
+        if (shutdown) {
+            throw new RejectedExecutionException("scheduler is shutdown");
+        }
+
+        PeriodicTask periodic = new PeriodicTask(task, initialDelayNanos, 0L, fixedDelayNanos, PeriodicMode.FIXED_DELAY);
+        periodic.scheduleFirst();
+        return periodic;
     }
 
     private enum PeriodicMode {
