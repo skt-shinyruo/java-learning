@@ -10,11 +10,13 @@ browser-readable entry point.
 - [Redis](redis/index.md): Redis data structure and Redisson notes.
 - [JDK](jdk/index.md): JDK-focused implementation notes.
 - [JVM](jvm/index.md): JVM-focused learning notes.
-- [Project Docs](project-docs/index.md): repository plans and design specs.
+- [深入理解Java虚拟机（第3版）](jvm-book/content/README.md): 按章节阅读的 JVM 书籍参考资料。
+- [Project Docs](project-docs/index.md): repository-level documentation landing page.
 
 ## Reading Notes
 
 - Module sections are topic-oriented learning notes.
 - Distributed Transactions collects repository-level middleware and mechanism notes that are not tied to a single code module.
-- Project Docs contains repository design and implementation artifacts.
+- The JVM book section exposes chapterized reference material from `references/`.
+- Project Docs is reserved for repository-level documentation when it is published.
 - Existing module docs remain in their original directories; this site is a navigation layer.

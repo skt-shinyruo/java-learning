@@ -1,14 +1,13 @@
 # Project Docs
 
-This section exposes repository plans and specs from the root `docs` tree.
+This section is the landing page for repository-level documentation in the MkDocs site.
 
-## Sections
+## Status
 
-- [Plans](content/plans/2026-03-05-gitignore.md)
-- [Superpowers Specs](content/superpowers/specs/2026-03-30-mkdocs-docs-site-design.md)
-- [Superpowers Plans](content/superpowers/plans/2026-03-23-nio-non-blocking-round-trip-implementation.md)
+- The previously published plan and superpower documents were removed from the repository.
+- No project-level documents are currently published in this section.
 
 ## Notes
 
-- These pages describe repository changes, designs, and implementation plans.
+- Add new repository-level docs here before linking them from `mkdocs.yml`.
 - Topic-oriented Java notes live under the module sections.
