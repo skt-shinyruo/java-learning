@@ -9,5 +9,5 @@ This section is the landing page for repository-level documentation in the MkDoc
 
 ## Notes
 
-- Add new repository-level docs here before linking them from `mkdocs.yml`.
+- Add new repository-level docs here before linking them from `mkdocs/mkdocs.yml`.
 - Topic-oriented Java notes live under the module sections.

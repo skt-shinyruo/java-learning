@@ -1,6 +1,6 @@
 site_name: Java Learning Docs
-site_dir: target/mkdocs
-docs_dir: docs-site
+site_dir: site
+docs_dir: docs
 strict: true
 not_in_nav: |
   jvm-book/content/README.md

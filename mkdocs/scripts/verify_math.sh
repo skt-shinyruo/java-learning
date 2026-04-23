@@ -2,12 +2,12 @@
 
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-OUTPUT_HTML="$ROOT_DIR/target/mkdocs/redis/content/hyperloglog/index.html"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+OUTPUT_HTML="$ROOT_DIR/mkdocs/site/redis/content/hyperloglog/index.html"
 
 cd "$ROOT_DIR"
 
-mkdocs build >/dev/null
+mkdocs build -f mkdocs/mkdocs.yml >/dev/null
 
 test -f "$OUTPUT_HTML"
 
