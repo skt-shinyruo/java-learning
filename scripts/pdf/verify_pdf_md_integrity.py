@@ -132,11 +132,13 @@ def broken_markdown_image_refs(paths: Sequence[Path]) -> list[tuple[Path, str]]:
 
 
 def main() -> int:
+    book_dir = Path("references/深入理解Java虚拟机_JVM高级特性与最佳实践_第3版")
+
     ap = argparse.ArgumentParser()
     ap.add_argument(
         "--pdf",
         type=Path,
-        default=Path("references/深入理解Java虚拟机：JVM高级特性与最佳实践（第3版）.pdf"),
+        default=book_dir / "深入理解Java虚拟机：JVM高级特性与最佳实践（第3版）.pdf",
     )
     ap.add_argument(
         "--md",
@@ -146,12 +148,12 @@ def main() -> int:
     ap.add_argument(
         "--chapters-dir",
         type=Path,
-        default=Path("references/深入理解Java虚拟机_JVM高级特性与最佳实践_第3版/chapters"),
+        default=book_dir / "chapters",
     )
     ap.add_argument(
         "--images",
         type=Path,
-        default=Path("references/深入理解Java虚拟机_JVM高级特性与最佳实践_第3版/images"),
+        default=book_dir / "images",
     )
     ap.add_argument("--sample-lines", type=int, default=10)
     ap.add_argument("--min-candidates", type=int, default=3)

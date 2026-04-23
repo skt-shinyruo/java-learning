@@ -12,7 +12,7 @@ from typing import Sequence
 
 
 BOOK_DIR = Path("references/深入理解Java虚拟机_JVM高级特性与最佳实践_第3版")
-PDF_PATH = Path("references/深入理解Java虚拟机：JVM高级特性与最佳实践（第3版）.pdf")
+PDF_PATH = BOOK_DIR / "深入理解Java虚拟机：JVM高级特性与最佳实践（第3版）.pdf"
 CHAPTERS_DIR = BOOK_DIR / "chapters"
 IMAGES_DIR = BOOK_DIR / "images"
 PAGE_IMAGE_NAME_RE = re.compile(r"page-\d{4}-image-\d+\.(?:jpe?g|png)$", re.IGNORECASE)

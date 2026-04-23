@@ -8,7 +8,8 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[3]
-BOOK_PDF = ROOT / "references/深入理解Java虚拟机：JVM高级特性与最佳实践（第3版）.pdf"
+BOOK_DIR = ROOT / "references/深入理解Java虚拟机_JVM高级特性与最佳实践_第3版"
+BOOK_PDF = BOOK_DIR / "深入理解Java虚拟机：JVM高级特性与最佳实践（第3版）.pdf"
 MODULE_PATH = ROOT / "scripts/pdf/convert_pdf_to_markdown.py"
 
 
