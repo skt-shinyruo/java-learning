@@ -2,6 +2,8 @@
 
 本文是 `wait/notify/notifyAll` 的专题文档，聚焦 monitor 协作本身，重点解释：
 
+- `wait/notify/notifyAll` 为什么定义在 `Object` 上
+- 为什么调用前必须先持有同一个对象的 monitor
 - `wait()` 到底在“等”什么
 - 常说的“等待队列”到底是什么
 - `notifyAll()` 之后线程为什么不会立刻继续执行
@@ -31,14 +33,24 @@ void wait(long timeoutMillis, int nanos) throws InterruptedException
 - 当条件不满足时，线程先释放这把锁
 - 等别的线程修改条件后，再把它唤醒回来继续执行
 
-这也是为什么它定义在 `Object` 上而不是 `Thread` 上：
+这也是为什么它定义在 `Object` 上，而不是 `Thread` 上：`wait/notify/notifyAll` 操作的不是线程本身，而是**某个对象的 monitor 和 wait set**。
 
-- Java 的内置锁是“每个对象一个 monitor”
-- `wait/notify/notifyAll` 操作的是“这个对象 monitor 里的等待集合”
+Java 里任意对象都可以作为内置锁：
+
+```java
+synchronized (lock) {
+    // 临界区
+}
+```
+
+这个 `lock` 对象关联着一把 monitor 锁，也关联着一个 `wait set`。当线程调用 `lock.wait()` 时，它进入的是 `lock` 这个对象的等待集合；当另一个线程调用 `lock.notify()` / `lock.notifyAll()` 时，它唤醒的也是 `lock` 这个对象等待集合里的线程。
+
+如果把 `wait/notify` 放在 `Thread` 上，语义反而会变得奇怪：线程 A 等待的通常不是“线程 B 本身”，而是某个共享条件，例如队列非空、任务完成、状态变更等。这个共享条件需要依附在一个共同的锁对象上完成检查、等待、修改和通知。
 
 结论先行：
 
 - `wait()` 必须在持有该对象 monitor 时调用，否则会抛 `IllegalMonitorStateException`
+- `synchronized(lock)` 和 `lock.wait()` / `lock.notifyAll()` 必须围绕同一个对象
 - `wait()` 调用后会**释放调用对象的 monitor 锁**
 - 线程被唤醒后，不是立刻继续执行，而是必须先**重新竞争并重新拿到同一把锁**
 - 只有重新拿到锁，`wait()` 才会返回
@@ -109,6 +121,31 @@ synchronized (lock) {
 7. 被唤醒的线程开始重新竞争 `lock` 的 monitor
 8. 线程重新拿到 `lock` 后，`wait()` 返回
 9. 线程再次检查 `while (!ready)`，条件成立后才继续执行
+
+这里的关键约束是：当前线程必须已经持有 `lock` 的 monitor，才能调用 `lock.wait()`。否则 JVM 会抛出 `IllegalMonitorStateException`。
+
+原因不是单纯的语法要求，而是 `wait()` 必须和同一把 monitor 锁配套工作：
+
+1. `wait()` 要释放调用对象的 monitor；既然要释放 `lock`，线程就必须先持有 `lock`
+2. “检查条件”和“进入等待”必须在同一把锁保护下完成，否则可能在判断 `ready == false` 之后、真正 `wait()` 之前，另一个线程已经完成 `notify()`，从而造成通知丢失
+3. 通知方通常会先修改共享状态，再调用 `notify/notifyAll`；等待方醒来并重新拿到同一把锁后，才能可靠看见这些状态变化
+
+因此，等待方和通知方都应该围绕同一个锁对象写：
+
+```java
+synchronized (lock) {
+    while (!ready) {
+        lock.wait();
+    }
+}
+```
+
+```java
+synchronized (lock) {
+    ready = true;
+    lock.notifyAll();
+}
+```
 
 ## 4. A / B 两个线程的完整时序
 

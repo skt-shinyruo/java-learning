@@ -6,6 +6,7 @@
 - 它们在字节码层面的差异
 - HotSpot 运行时如何基于 monitor 和对象头处理锁
 - `wait/notify`、`Condition.await/signal` 的关系
+- `wait/notify` 为什么属于 `Object`，以及为什么必须配合 `synchronized`
 - `wait` 为什么必须写在 `while` 里
 - `sleep()` 和 `wait()` 的区别
 - 面试可直接复述的总结版本
@@ -671,7 +672,25 @@ public synchronized void b() {
 
 这一节只保留总览结论。更完整的时序图、线程视角、`wait set` 解释和仓库内 `AbcPrinters` 示例，见 [wait-notify.md](./wait-notify.md)。
 
-### 6.1 `wait()` 做了什么
+### 6.1 为什么这些方法定义在 `Object` 上
+
+因为 `wait/notify/notifyAll` 操作的不是线程本身，而是**某个对象的 monitor 和 wait set**。
+
+Java 任意对象都可以作为内置锁：
+
+```java
+synchronized (lock) {
+    // 临界区
+}
+```
+
+这个 `lock` 对象背后关联着 monitor 锁，也关联着等待集合。调用 `lock.wait()` 时，当前线程进入的是 `lock` 的等待集合；调用 `lock.notify()` / `lock.notifyAll()` 时，唤醒的也是 `lock` 等待集合里的线程。
+
+如果这些方法定义在 `Thread` 上，语义会不准确。线程之间协作时，等待的通常不是“某个线程”，而是某个共享条件，例如队列非空、任务完成、状态变更等。这个条件需要依附在一个共同的锁对象上完成检查、等待、修改和通知，所以这些方法放在 `Object` 上。
+
+---
+
+### 6.2 `wait()` 做了什么
 
 调用 `wait()` 时，线程会：
 
@@ -690,7 +709,7 @@ public synchronized void b() {
 
 ---
 
-### 6.2 为什么 `wait()` 必须在同步块中调用
+### 6.3 为什么 `wait()` 必须在同步块中调用
 
 因为如果当前线程没有持有 monitor，JVM 就无法安全完成：
 
@@ -714,9 +733,25 @@ synchronized (lock) {
 
 里，就会抛出 `IllegalMonitorStateException`。
 
+更具体地说，`wait()` 必须和同一个对象的 `synchronized` 配合：
+
+```java
+synchronized (lock) {
+    while (!ready) {
+        lock.wait();
+    }
+}
+```
+
+这里要求 `synchronized(lock)` 和 `lock.wait()` 使用同一个对象，原因有三点：
+
+1. `wait()` 要释放的是调用对象的 monitor；线程要释放 `lock`，就必须先持有 `lock`
+2. 条件检查和进入等待集合必须放在同一把锁内，否则可能在判断 `ready == false` 后、真正 `wait()` 前，其他线程已经 `notify()`，导致通知丢失
+3. 通知方通常会在同一把锁内修改共享状态并 `notify/notifyAll`；等待方醒来并重新拿到这把锁后，才能可靠看到状态变化
+
 ---
 
-### 6.3 `notify()` / `notifyAll()` 做了什么
+### 6.4 `notify()` / `notifyAll()` 做了什么
 
 - 把等待线程从等待集合中转移出来
 - 让它们有资格去重新竞争 monitor
