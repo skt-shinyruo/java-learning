@@ -93,6 +93,9 @@ nav:
       - Overview: jdk/index.md
       - Array Basics: jdk/content/array-basics.md
       - HashMap: jdk/content/hashmap.md
+  - NIO:
+      - Overview: nio/index.md
+      - Direct Memory and Copy Paths: nio/content/nio-direct-memory.md
   - JVM:
       - Overview: jvm/index.md
       - JVM Memory: jvm/content/jvm-memory.md
