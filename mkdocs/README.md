@@ -39,6 +39,35 @@ mkdocs build -f mkdocs/mkdocs.yml
 mkdocs/site/
 ```
 
+## GitHub Pages 自动发布
+
+仓库包含 GitHub Actions 工作流：
+
+```text
+.github/workflows/pages.yml
+```
+
+触发条件：
+
+- 推送到 `main` 分支，并且变更涉及 MkDocs 配置、站点入口、模块文档或引用资料
+- 在 GitHub Actions 页面手动执行 `workflow_dispatch`
+
+工作流会安装 `mkdocs/requirements.txt`，执行：
+
+```bash
+mkdocs build -f mkdocs/mkdocs.yml
+```
+
+然后把 `mkdocs/site/` 发布到 GitHub Pages。
+
+发布地址：
+
+```text
+https://skt-shinyruo.github.io/java-learning/
+```
+
+首次启用时，在 GitHub 仓库设置里进入 `Settings -> Pages`，将 `Build and deployment` 的 `Source` 设置为 `GitHub Actions`。
+
 ## 本地预览
 
 ```bash

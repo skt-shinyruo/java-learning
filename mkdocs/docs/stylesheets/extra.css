@@ -15,3 +15,115 @@
 .md-search__input::placeholder {
   color: var(--md-default-fg-color);
 }
+
+.doc-diagram {
+  --dg-surface: #f8fafc;
+  --dg-panel: #ffffff;
+  --dg-border: #cbd5e1;
+  --dg-text: #172033;
+  --dg-muted: #334155;
+  --dg-green: #ecfdf5;
+  --dg-green-border: #86efac;
+  --dg-blue: #eff6ff;
+  --dg-blue-border: #93c5fd;
+  --dg-orange: #fff7ed;
+  --dg-orange-border: #fdba74;
+  --dg-purple: #f5f3ff;
+  --dg-purple-border: #c4b5fd;
+  --dg-yellow: #fefce8;
+  --dg-yellow-border: #fde047;
+
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 1rem 0;
+  color: var(--dg-muted);
+}
+
+[data-md-color-scheme="slate"] .doc-diagram {
+  --dg-surface: #0f172a;
+  --dg-panel: #111827;
+  --dg-border: #475569;
+  --dg-text: #e5e7eb;
+  --dg-muted: #cbd5e1;
+  --dg-green: #052e2b;
+  --dg-green-border: #0f766e;
+  --dg-blue: #172554;
+  --dg-blue-border: #2563eb;
+  --dg-orange: #431407;
+  --dg-orange-border: #c2410c;
+  --dg-purple: #2e1065;
+  --dg-purple-border: #7e22ce;
+  --dg-yellow: #422006;
+  --dg-yellow-border: #ca8a04;
+}
+
+.doc-diagram .dg-title {
+  font: 700 26px sans-serif;
+  fill: var(--dg-text);
+}
+
+.doc-diagram .dg-group-title {
+  font: 700 17px sans-serif;
+  fill: var(--dg-text);
+}
+
+.doc-diagram .dg-box-title {
+  font: 700 14px sans-serif;
+  fill: var(--dg-text);
+}
+
+.doc-diagram .dg-body {
+  font: 13px sans-serif;
+  fill: var(--dg-muted);
+}
+
+.doc-diagram .dg-surface {
+  fill: var(--dg-surface);
+  stroke: var(--dg-border);
+  stroke-width: 1.4;
+}
+
+.doc-diagram .dg-box {
+  fill: var(--dg-panel);
+  stroke: var(--dg-border);
+}
+
+.doc-diagram .dg-green {
+  fill: var(--dg-green);
+  stroke: var(--dg-green-border);
+}
+
+.doc-diagram .dg-blue {
+  fill: var(--dg-blue);
+  stroke: var(--dg-blue-border);
+}
+
+.doc-diagram .dg-orange {
+  fill: var(--dg-orange);
+  stroke: var(--dg-orange-border);
+}
+
+.doc-diagram .dg-purple {
+  fill: var(--dg-purple);
+  stroke: var(--dg-purple-border);
+}
+
+.doc-diagram .dg-yellow {
+  fill: var(--dg-yellow);
+  stroke: var(--dg-yellow-border);
+}
+
+.doc-diagram .dg-arrow {
+  stroke: var(--dg-muted);
+  stroke-width: 2;
+  fill: none;
+}
+
+.doc-diagram .dg-dash {
+  stroke-dasharray: 6 5;
+}
+
+.doc-diagram .dg-marker {
+  fill: var(--dg-muted);
+}

@@ -1,4 +1,5 @@
 site_name: Java Learning Docs
+site_url: https://skt-shinyruo.github.io/java-learning/
 site_dir: site
 docs_dir: docs
 strict: true
@@ -99,7 +100,9 @@ nav:
   - JVM:
       - Overview: jvm/index.md
       - JVM Memory: jvm/content/jvm-memory.md
+      - HotSpot OopMap 与 GC Roots: jvm/content/oopmap-gc-roots.md
       - Java Object Layout（对象布局）: jvm/content/java-object-layout.md
+      - HotSpot Object Access（对象访问定位）: jvm/content/hotspot-object-access.md
       - Object Padding: jvm/content/object-padding.md
   - 深入理解Java虚拟机（第3版）:
       - 前置:
