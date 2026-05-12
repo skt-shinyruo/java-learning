@@ -49,6 +49,21 @@ flowchart TB
   Private --> NativeStack
 ```
 
+如果只按 JVM 规范口径抽象，可以先记成这棵树：
+
+```text
+JVM 运行时数据区
+├── 线程共享
+│   ├── Java 堆
+│   └── 方法区
+│       └── 运行时常量池
+│
+└── 线程私有
+    ├── 程序计数器
+    ├── Java 虚拟机栈
+    └── 本地方法栈
+```
+
 ---
 
 ## 2) HotSpot/OpenJDK：进程内存（OS/RSS/容器视角）
@@ -67,6 +82,77 @@ flowchart TB
 - **JNI / 第三方 native 库 malloc**：不一定受 Direct Memory 上限约束
 - **mmap / 文件映射**：内存映射文件、共享库等，`RSS` 与访问热度相关
 - **OS Page Cache / cgroup limit**：常影响“容器整体内存压力”，但不完全等同于“JVM 自己用掉的内存”
+
+一个更完整的 HotSpot JDK 8+ 视角可以这样看：
+
+```text
+JVM 进程内存
+├── Java 堆 Heap
+│   ├── 对象实例
+│   ├── 数组对象
+│   ├── String 对象
+│   ├── java.lang.Class 对象
+│   ├── static 字段的实际值，通常关联在 Class 对象上
+│   └── GC 分代/分区结构
+│       ├── Young 区 / Eden / Survivor    # 传统分代 GC
+│       ├── Old 区
+│       └── Region / Humongous Region     # G1、ZGC 等更偏向分区模型
+│
+├── 每个 Java 线程私有区域
+│   ├── 程序计数器 PC Register
+│   ├── Java 虚拟机栈 JVM Stack
+│   │   └── 栈帧 Stack Frame
+│   │       ├── 局部变量表
+│   │       ├── 操作数栈
+│   │       ├── 动态链接
+│   │       └── 方法返回地址/返回信息
+│   └── 本地方法栈 Native Method Stack
+│
+└── 本地内存 Native Memory，也叫堆外内存的一大类
+    ├── 元空间 Metaspace
+    │   ├── 类元信息 Klass Metadata
+    │   ├── 字段元信息
+    │   ├── 方法元信息
+    │   ├── 方法字节码相关结构
+    │   ├── 运行时常量池元数据
+    │   ├── 注解信息
+    │   ├── 方法表 / 接口表
+    │   └── 类加载器相关数据
+    │
+    ├── Compressed Class Space
+    │   └── 压缩类指针相关的类元数据区域
+    │
+    ├── Code Cache
+    │   ├── JIT 编译后的机器码
+    │   ├── JVM 生成的 stub 代码
+    │   └── 方法入口跳转代码等
+    │
+    ├── Direct Memory
+    │   └── DirectByteBuffer 背后的堆外内存
+    │
+    ├── 线程栈实际占用的 native memory
+    │   ├── Java 线程栈
+    │   └── native 调用栈
+    │
+    ├── GC 内部数据结构
+    │   ├── Card Table
+    │   ├── Remembered Set
+    │   ├── Mark Bitmap
+    │   ├── GC worker 线程数据
+    │   └── 各类 GC 辅助结构
+    │
+    ├── JVM 内部 C/C++ 结构
+    │   ├── Symbol Table
+    │   ├── String Table
+    │   ├── System Dictionary
+    │   ├── ClassLoaderData
+    │   └── JVM 内部管理对象
+    │
+    ├── JNI / native 库申请的内存
+    ├── NIO / mmap 映射文件内存
+    ├── JIT 编译器自身工作内存
+    └── JVM 进程、动态链接库、运行时环境本身占用的内存
+```
 
 ```mermaid
 flowchart TB
@@ -111,6 +197,27 @@ flowchart TB
   OSView --> Limits
   OSView --> PageCache
 ```
+
+两张图的关系可以概括为：
+
+```text
+JVM 规范中的方法区
+        ↓ HotSpot JDK 8+ 的实现
+Metaspace + Compressed Class Space + 部分堆中 Class 对象配合实现
+```
+
+几个容易混淆的点：
+
+- **方法区是规范概念**，元空间是 HotSpot 对方法区的主要实现。
+- **元空间属于本地内存**，不属于 Java 堆。
+- **`java.lang.Class` 对象在堆里**，但它指向的类元数据主要在元空间里。
+- **Direct Memory 不是方法区**，它也是本地内存的一部分。
+- **线程栈在规范里是 JVM 栈/本地方法栈，但实际内存来自 native memory。**
+- **Code Cache 存 JIT 后的机器码，不是 Java 堆，也通常不算元空间。**
+
+一句话版：
+
+> Java 堆主要放对象；线程栈放方法调用过程；元空间放类元数据；Code Cache 放 JIT 后的机器码；Direct Memory 放堆外 buffer；这些堆外部分总体都属于 JVM 进程使用的本地内存。
 
 ---
 
