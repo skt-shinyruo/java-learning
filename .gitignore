@@ -59,6 +59,8 @@ Thumbs.db
 # Tools
 # ---------------------------------------------------------------------------
 .codex
+.playwright-mcp/
+.superpowers/
 .serena/
 .worktrees/
 
