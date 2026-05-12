@@ -58,24 +58,65 @@ Foo x = new Foo();
 
 很多困惑来自于把“对象实例”和“类/方法”混在一起。HotSpot 的关系更像下面这张图：
 
-```text
-Java 栈/寄存器（每线程）                 Java Heap（堆）                         Metaspace / CodeCache
------------------------                --------------------                    -------------------------
-局部变量 x（oop/ref）  ----->          +--------------------+                  +-------------------------+
-  - 保存“对象地址/编码值”               | 对象实例（某个 Foo）  | --klass ptr--> | Klass 元数据（Foo）       |
-                                      | 0..7   Mark Word    |                  | - 字段布局/offset 信息     |
-                                      | 8..    Klass Pointer|                  | - 常量池 ConstantPool      |
-                                      | ...    实例字段       |                  | - 方法元数据 Method*       |
-                                      | ...    tail padding  |                  |   - 字节码 bytecode        |
-                                      +--------------------+                  | - vtable/itable 等分派表   |
-                                                                              +-------------------------+
-                                                                                          |
-                                                                                          | JIT 编译后的机器码入口
-                                                                                          v
-                                                                                     +-----------+
-                                                                                     | CodeCache |
-                                                                                     +-----------+
-```
+
+
+<svg width="980" height="420" viewBox="0 0 980 420" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#333"/>
+    </marker>
+  </defs>
+
+  <style>
+    .title { font: 700 16px sans-serif; }
+    .text { font: 14px sans-serif; }
+    .small { font: 12px monospace; }
+    .box { fill: #f8fafc; stroke: #334155; stroke-width: 1.5; rx: 6; }
+    .area { fill: #eef6ff; stroke: #64748b; stroke-width: 1.5; rx: 8; }
+    .arrow { stroke: #333; stroke-width: 1.6; fill: none; marker-end: url(#arrow); }
+  </style>
+
+  <!-- Stack -->
+  <rect class="area" x="30" y="40" width="220" height="140"/>
+  <text class="title" x="45" y="70">Java 栈 / 寄存器</text>
+  <text class="text" x="45" y="105">局部变量 x（oop/ref）</text>
+  <text class="text" x="45" y="130">保存对象地址 / 编码值</text>
+
+  <!-- Heap object -->
+  <rect class="area" x="330" y="35" width="260" height="220"/>
+  <text class="title" x="350" y="65">Java Heap</text>
+  <rect class="box" x="355" y="90" width="210" height="135"/>
+  <text class="text" x="375" y="118">对象实例：Foo</text>
+  <text class="small" x="375" y="148">0..7   Mark Word</text>
+  <text class="small" x="375" y="172">8..    Klass Pointer</text>
+  <text class="small" x="375" y="196">...    实例字段</text>
+  <text class="small" x="375" y="220">...    tail padding</text>
+
+  <!-- Metaspace -->
+  <rect class="area" x="670" y="35" width="260" height="245"/>
+  <text class="title" x="690" y="65">Metaspace</text>
+  <rect class="box" x="695" y="90" width="210" height="160"/>
+  <text class="text" x="715" y="118">Klass 元数据：Foo</text>
+  <text class="small" x="715" y="148">字段布局 / offset</text>
+  <text class="small" x="715" y="172">ConstantPool</text>
+  <text class="small" x="715" y="196">Method* / bytecode</text>
+  <text class="small" x="715" y="220">vtable / itable</text>
+
+  <!-- CodeCache -->
+  <rect class="area" x="730" y="325" width="150" height="60"/>
+  <text class="title" x="765" y="360">CodeCache</text>
+
+  <!-- Arrows -->
+  <path class="arrow" d="M250 115 C285 115, 295 155, 355 155"/>
+  <text class="small" x="260" y="105">oop/ref</text>
+
+  <path class="arrow" d="M565 172 C610 172, 635 170, 695 170"/>
+  <text class="small" x="595" y="160">klass ptr</text>
+
+  <path class="arrow" d="M800 250 L800 325"/>
+  <text class="small" x="815" y="295">JIT 入口</text>
+</svg>
+
 
 你可以把它记成一句话：
 
