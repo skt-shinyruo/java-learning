@@ -16,6 +16,200 @@
   color: var(--md-default-fg-color);
 }
 
+html {
+  --docs-layout-default-sidebars-width: 24.2rem;
+  --docs-sidebar-inner-offset: 0.6rem;
+  --docs-nav-width: 12.1rem;
+  --docs-content-grid-width: 61rem;
+  --docs-toc-width: 12.1rem;
+}
+
+html[data-docs-nav-width="compact"] {
+  --docs-nav-width: 12.1rem;
+}
+
+html[data-docs-nav-width="comfortable"] {
+  --docs-nav-width: 14rem;
+}
+
+html[data-docs-nav-width="wide"] {
+  --docs-nav-width: 16rem;
+}
+
+html[data-docs-nav-width="full"] {
+  --docs-nav-width: 18rem;
+}
+
+html[data-docs-content-width="compact"] {
+  --docs-content-grid-width: 61rem;
+}
+
+html[data-docs-content-width="comfortable"] {
+  --docs-content-grid-width: 72rem;
+}
+
+html[data-docs-content-width="wide"] {
+  --docs-content-grid-width: 84rem;
+}
+
+html[data-docs-content-width="full"] {
+  --docs-content-grid-width: 96rem;
+}
+
+html[data-docs-toc-width="compact"] {
+  --docs-toc-width: 12.1rem;
+}
+
+html[data-docs-toc-width="comfortable"] {
+  --docs-toc-width: 14rem;
+}
+
+html[data-docs-toc-width="wide"] {
+  --docs-toc-width: 16rem;
+}
+
+html[data-docs-toc-width="full"] {
+  --docs-toc-width: 18rem;
+}
+
+html .md-grid {
+  max-width: calc(
+    var(--docs-content-grid-width) +
+    var(--docs-nav-width) +
+    var(--docs-toc-width) -
+    var(--docs-layout-default-sidebars-width)
+  );
+}
+
+@media screen and (min-width: 76.25em) {
+  html .md-sidebar--primary {
+    width: var(--docs-nav-width);
+  }
+
+  html .md-sidebar--primary .md-sidebar__inner {
+    padding-left: 0;
+    padding-right: var(--docs-sidebar-inner-offset);
+  }
+
+  [dir="rtl"] .md-sidebar--primary .md-sidebar__inner {
+    padding-left: var(--docs-sidebar-inner-offset);
+    padding-right: 0;
+  }
+}
+
+@media screen and (min-width: 60em) {
+  html .md-sidebar--secondary {
+    width: var(--docs-toc-width);
+  }
+
+  html .md-sidebar--secondary .md-sidebar__inner {
+    padding-left: var(--docs-sidebar-inner-offset);
+    padding-right: var(--docs-sidebar-inner-offset);
+  }
+
+  [dir="rtl"] .md-sidebar--secondary .md-sidebar__inner {
+    padding-left: 0;
+    padding-right: var(--docs-sidebar-inner-offset);
+  }
+}
+
+.docs-layout-widths {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin: 0 0.4rem;
+}
+
+.docs-layout-widths__trigger {
+  height: 1.6rem;
+  padding: 0 0.55rem;
+  border-radius: 0.25rem;
+  background-color: var(--md-code-bg-color);
+  color: var(--md-default-fg-color--light);
+  cursor: pointer;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.docs-layout-widths__trigger:hover,
+.docs-layout-widths__trigger[aria-expanded="true"] {
+  color: var(--md-accent-fg-color);
+}
+
+.docs-layout-widths__panel {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  z-index: 3;
+  display: grid;
+  min-width: 16rem;
+  padding: 0.55rem;
+  border: 0.05rem solid var(--md-default-fg-color--lightest);
+  border-radius: 0.35rem;
+  background-color: var(--md-default-bg-color);
+  box-shadow: var(--md-shadow-z2);
+  gap: 0.45rem;
+}
+
+.docs-layout-widths__panel[hidden] {
+  display: none;
+}
+
+.docs-layout-widths__setting {
+  display: grid;
+  grid-template-columns: 4rem 1fr;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.docs-layout-widths__label {
+  color: var(--md-default-fg-color);
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.docs-layout-widths__options {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(2.2rem, 1fr));
+  gap: 0.12rem;
+  padding: 0.12rem;
+  border-radius: 0.25rem;
+  background-color: var(--md-code-bg-color);
+}
+
+.docs-layout-widths__button {
+  min-width: 0;
+  height: 1.45rem;
+  padding: 0 0.3rem;
+  border-radius: 0.18rem;
+  color: var(--md-default-fg-color--light);
+  cursor: pointer;
+  font-size: 0.58rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.docs-layout-widths__button:hover {
+  color: var(--md-accent-fg-color);
+}
+
+.docs-layout-widths__button[aria-pressed="true"] {
+  background-color: var(--md-accent-fg-color--transparent);
+  box-shadow: inset 0 0 0 0.05rem var(--md-accent-fg-color);
+  color: var(--md-accent-fg-color);
+}
+
+@media screen and (max-width: 76.234375em) {
+  .docs-layout-widths {
+    display: none;
+  }
+}
+
 .doc-diagram {
   --dg-surface: #f8fafc;
   --dg-panel: #ffffff;

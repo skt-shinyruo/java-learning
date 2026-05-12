@@ -6,6 +6,7 @@
 - `requirements.txt`：MkDocs Python 依赖
 - `docs/`：MkDocs 站点入口目录
 - `scripts/verify_math.sh`：数学公式渲染校验脚本
+- `scripts/verify_layout_width.sh`：文档主体宽度配置校验脚本
 
 说明：
 
@@ -80,6 +81,39 @@ mkdocs serve -f mkdocs/mkdocs.yml
 http://127.0.0.1:8000
 ```
 
+## 配置文档布局宽度
+
+文档布局默认宽度由 `mkdocs/mkdocs.yml` 中的配置控制：
+
+```yaml
+extra:
+  layout:
+    nav_width: compact
+    content_width: compact
+    toc_width: compact
+```
+
+可选值从窄到宽依次为：
+
+- `compact`：当前默认宽度，也是最小层级
+- `comfortable`：中等加宽
+- `wide`：宽屏阅读
+- `full`：最大层级
+
+三个配置项分别控制：
+
+- `nav_width`：左侧目录宽度
+- `content_width`：中间正文宽度
+- `toc_width`：右侧目录宽度
+
+页面顶部的“布局”按钮也提供实时切换面板，可分别调整左侧目录、正文、右侧目录。用户选择会保存到浏览器 `localStorage`，下次打开文档页时会自动恢复；清空浏览器数据或保存值无效时，会回退到 `mkdocs.yml` 中的默认值。
+
+对应的 `localStorage` 键为：
+
+- `java-learning-docs-nav-width`
+- `java-learning-docs-content-width`
+- `java-learning-docs-toc-width`
+
 ## 校验数学公式渲染
 
 ```bash
@@ -87,3 +121,11 @@ mkdocs/scripts/verify_math.sh
 ```
 
 这个脚本会先执行一次构建，再检查生成后的 HTML 中是否包含正确的 MathJax 和 arithmatex 输出。
+
+## 校验文档主体宽度配置
+
+```bash
+mkdocs/scripts/verify_layout_width.sh
+```
+
+这个脚本会先执行一次构建，再检查生成后的 HTML 是否带有左侧目录、正文、右侧目录的当前宽度层级、早期恢复脚本和运行时切换脚本，以及 CSS 是否包含对应宽度层级规则。

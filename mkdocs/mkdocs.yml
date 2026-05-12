@@ -3,6 +3,8 @@ site_url: https://skt-shinyruo.github.io/java-learning/
 site_dir: site
 docs_dir: docs
 strict: true
+hooks:
+  - hooks/layout_width.py
 not_in_nav: |
   jvm-book/content/README.md
   jvm-book/content/02-第一部分-走近Java.md
@@ -45,7 +47,14 @@ theme:
 extra_css:
   - stylesheets/extra.css
 
+extra:
+  layout:
+    nav_width: compact
+    content_width: compact
+    toc_width: compact
+
 extra_javascript:
+  - javascripts/layout-width.js
   - javascripts/mathjax.js
   - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
 
