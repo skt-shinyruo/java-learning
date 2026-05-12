@@ -1,0 +1,80 @@
+<svg class="doc-diagram" viewBox="0 0 1040 430" role="img" aria-label="JVM 规范层运行时数据区" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .doc-diagram {
+      --dg-surface: #f8fafc;
+      --dg-panel: #ffffff;
+      --dg-border: #cbd5e1;
+      --dg-text: #172033;
+      --dg-muted: #334155;
+      --dg-green: #ecfdf5;
+      --dg-green-border: #86efac;
+      --dg-blue: #eff6ff;
+      --dg-blue-border: #93c5fd;
+      --dg-orange: #fff7ed;
+      --dg-orange-border: #fdba74;
+      --dg-purple: #f5f3ff;
+      --dg-purple-border: #c4b5fd;
+      --dg-yellow: #fefce8;
+      --dg-yellow-border: #fde047;
+      color: var(--dg-muted);
+    }
+    @media (prefers-color-scheme: dark) {
+      .doc-diagram {
+        --dg-surface: #0f172a;
+        --dg-panel: #111827;
+        --dg-border: #475569;
+        --dg-text: #e5e7eb;
+        --dg-muted: #cbd5e1;
+        --dg-green: #052e2b;
+        --dg-green-border: #0f766e;
+        --dg-blue: #172554;
+        --dg-blue-border: #2563eb;
+        --dg-orange: #431407;
+        --dg-orange-border: #c2410c;
+        --dg-purple: #2e1065;
+        --dg-purple-border: #7e22ce;
+        --dg-yellow: #422006;
+        --dg-yellow-border: #ca8a04;
+      }
+    }
+    .dg-title { font: 700 26px sans-serif; fill: var(--dg-text); }
+    .dg-group-title { font: 700 17px sans-serif; fill: var(--dg-text); }
+    .dg-box-title { font: 700 14px sans-serif; fill: var(--dg-text); }
+    .dg-body { font: 13px sans-serif; fill: var(--dg-muted); }
+    .dg-surface { fill: var(--dg-surface); stroke: var(--dg-border); stroke-width: 1.4; }
+    .dg-box { fill: var(--dg-panel); stroke: var(--dg-border); }
+    .dg-green { fill: var(--dg-green); stroke: var(--dg-green-border); }
+    .dg-blue { fill: var(--dg-blue); stroke: var(--dg-blue-border); }
+    .dg-orange { fill: var(--dg-orange); stroke: var(--dg-orange-border); }
+    .dg-purple { fill: var(--dg-purple); stroke: var(--dg-purple-border); }
+    .dg-yellow { fill: var(--dg-yellow); stroke: var(--dg-yellow-border); }
+    .dg-arrow { stroke: var(--dg-muted); stroke-width: 2; fill: none; }
+    .dg-dash { stroke-dasharray: 6 5; }
+    .dg-marker { fill: var(--dg-muted); }
+  </style>
+  <rect x="20" y="20" width="1000" height="390" rx="14" class="dg-surface"/>
+  <text x="520" y="58" text-anchor="middle" class="dg-title">JVM 运行时数据区（规范层）</text>
+
+  <rect x="55" y="90" width="450" height="285" rx="12" class="dg-blue"/>
+  <text x="280" y="122" text-anchor="middle" class="dg-group-title">线程共享</text>
+  <rect x="85" y="145" width="390" height="82" rx="10" class="dg-box"/>
+  <text x="105" y="176" class="dg-box-title">Java 堆 Heap</text>
+  <text x="105" y="202" class="dg-body">对象实例 / 数组；通常由 GC 管理</text>
+  <rect x="85" y="250" width="390" height="92" rx="10" class="dg-box"/>
+  <text x="105" y="281" class="dg-box-title">方法区 Method Area</text>
+  <text x="105" y="307" class="dg-body">类元数据 / 运行时常量池</text>
+  <text x="105" y="330" class="dg-body">不同实现可对应 PermGen / Metaspace</text>
+
+  <rect x="535" y="90" width="450" height="285" rx="12" class="dg-purple"/>
+  <text x="760" y="122" text-anchor="middle" class="dg-group-title">线程私有</text>
+  <rect x="565" y="145" width="390" height="58" rx="10" class="dg-box"/>
+  <text x="585" y="176" class="dg-box-title">程序计数器 PC Register</text>
+  <text x="585" y="195" class="dg-body">当前线程执行字节码的位置指示</text>
+  <rect x="565" y="220" width="390" height="82" rx="10" class="dg-box"/>
+  <text x="585" y="251" class="dg-box-title">Java 虚拟机栈 JVM Stack</text>
+  <text x="585" y="277" class="dg-body">栈帧：局部变量表 / 操作数栈</text>
+  <text x="585" y="294" class="dg-body">动态链接 / 方法返回信息</text>
+  <rect x="565" y="320" width="390" height="50" rx="10" class="dg-box"/>
+  <text x="585" y="350" class="dg-box-title">本地方法栈 Native Method Stack</text>
+  <text x="585" y="368" class="dg-body">JNI / native 方法调用相关的栈</text>
+</svg>
