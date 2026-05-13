@@ -38,3 +38,4 @@ Pull requests should describe the change, list affected modules or docs paths, l
 ## Agent-Specific Instructions
 
 Do not overwrite generated or local workspace changes you did not make. Prefer updating source docs and scripts over editing generated files in `mkdocs/site/` directly.
+Do not modify content under `references/` unless the user explicitly requests it.
