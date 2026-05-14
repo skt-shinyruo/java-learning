@@ -1,16 +1,37 @@
 (function () {
-  var values = ["compact", "comfortable", "wide", "full"];
-  var valueLabels = {
-    compact: "紧凑",
-    comfortable: "中等",
-    wide: "宽屏",
-    full: "最大"
-  };
-  var valueTitles = {
-    compact: "compact",
-    comfortable: "comfortable",
-    wide: "wide",
-    full: "full"
+  var optionSets = {
+    width: {
+      values: ["compact", "comfortable", "wide", "full"],
+      labels: {
+        compact: "紧凑",
+        comfortable: "中等",
+        wide: "宽屏",
+        full: "最大"
+      },
+      titles: {
+        compact: "compact",
+        comfortable: "comfortable",
+        wide: "wide",
+        full: "full"
+      },
+      fallback: "compact"
+    },
+    spacing: {
+      values: ["compact", "normal", "wide", "extra"],
+      labels: {
+        compact: "紧凑",
+        normal: "常规",
+        wide: "宽松",
+        extra: "最大"
+      },
+      titles: {
+        compact: "compact",
+        normal: "normal",
+        wide: "wide",
+        extra: "extra"
+      },
+      fallback: "compact"
+    }
   };
   var settings = [
     {
@@ -18,32 +39,47 @@
       label: "左侧目录",
       title: "左目录宽度",
       attribute: "data-docs-nav-width",
-      storageKey: "java-learning-docs-nav-width"
+      storageKey: "java-learning-docs-nav-width",
+      optionSet: "width"
     },
     {
       key: "content",
       label: "正文",
       title: "正文宽度",
       attribute: "data-docs-content-width",
-      storageKey: "java-learning-docs-content-width"
+      storageKey: "java-learning-docs-content-width",
+      optionSet: "width"
     },
     {
       key: "toc",
       label: "右侧目录",
       title: "右目录宽度",
       attribute: "data-docs-toc-width",
-      storageKey: "java-learning-docs-toc-width"
+      storageKey: "java-learning-docs-toc-width",
+      optionSet: "width"
+    },
+    {
+      key: "letter-spacing",
+      label: "字距",
+      title: "正文字距",
+      attribute: "data-docs-letter-spacing",
+      storageKey: "java-learning-docs-letter-spacing",
+      optionSet: "spacing"
     }
   ];
 
-  function isAllowed(value) {
-    return values.indexOf(value) !== -1;
+  function getOptionSet(setting) {
+    return optionSets[setting.optionSet] || optionSets.width;
   }
 
-  function getStoredWidth(setting) {
+  function isAllowed(setting, value) {
+    return getOptionSet(setting).values.indexOf(value) !== -1;
+  }
+
+  function getStoredValue(setting) {
     try {
       var stored = localStorage.getItem(setting.storageKey);
-      if (isAllowed(stored)) {
+      if (isAllowed(setting, stored)) {
         return stored;
       }
       if (stored !== null) {
@@ -53,37 +89,44 @@
     return null;
   }
 
-  function getCurrentWidth(setting) {
+  function getCurrentValue(setting) {
     var current = document.documentElement.getAttribute(setting.attribute);
-    return isAllowed(current) ? current : "compact";
+    var options = getOptionSet(setting);
+    return isAllowed(setting, current) ? current : options.fallback;
   }
 
-  function saveWidth(setting, width) {
+  function saveValue(setting, value) {
     try {
-      localStorage.setItem(setting.storageKey, width);
+      localStorage.setItem(setting.storageKey, value);
     } catch (error) {}
   }
 
-  function syncButtons(setting, width) {
+  function syncButtons(setting, value) {
     var selector =
+      "[data-docs-layout-setting-target='" + setting.key + "'] " +
+      "[data-docs-layout-setting-value], " +
       "[data-docs-layout-width-target='" + setting.key + "'] " +
       "[data-docs-layout-width-value]";
     var buttons = document.querySelectorAll(selector);
     for (var i = 0; i < buttons.length; i += 1) {
       var button = buttons[i];
-      var active = button.getAttribute("data-docs-layout-width-value") === width;
+      var buttonValue =
+        button.getAttribute("data-docs-layout-setting-value") ||
+        button.getAttribute("data-docs-layout-width-value");
+      var active = buttonValue === value;
       button.setAttribute("aria-pressed", active ? "true" : "false");
     }
   }
 
-  function applyWidth(setting, width, persist) {
-    if (!isAllowed(width)) {
-      width = "compact";
+  function applyValue(setting, value, persist) {
+    var options = getOptionSet(setting);
+    if (!isAllowed(setting, value)) {
+      value = options.fallback;
     }
-    document.documentElement.setAttribute(setting.attribute, width);
-    syncButtons(setting, width);
+    document.documentElement.setAttribute(setting.attribute, value);
+    syncButtons(setting, value);
     if (persist) {
-      saveWidth(setting, width);
+      saveValue(setting, value);
     }
   }
 
@@ -108,8 +151,10 @@
 
   function createSetting(setting) {
     var row = document.createElement("div");
+    var optionsConfig = getOptionSet(setting);
     row.className = "docs-layout-widths__setting";
     row.setAttribute("data-docs-layout-width-target", setting.key);
+    row.setAttribute("data-docs-layout-setting-target", setting.key);
 
     var label = document.createElement("span");
     label.className = "docs-layout-widths__label";
@@ -122,17 +167,18 @@
     options.setAttribute("role", "group");
     options.setAttribute("aria-label", setting.title);
 
-    values.forEach(function (value) {
+    optionsConfig.values.forEach(function (value) {
       var button = document.createElement("button");
       button.className = "docs-layout-widths__button";
       button.type = "button";
-      button.textContent = valueLabels[value];
-      button.title = setting.title + "：" + valueTitles[value];
-      button.setAttribute("aria-label", setting.title + "：" + valueTitles[value]);
+      button.textContent = optionsConfig.labels[value];
+      button.title = setting.title + "：" + optionsConfig.labels[value];
+      button.setAttribute("aria-label", setting.title + "：" + optionsConfig.labels[value]);
       button.setAttribute("aria-pressed", "false");
       button.setAttribute("data-docs-layout-width-value", value);
+      button.setAttribute("data-docs-layout-setting-value", value);
       button.addEventListener("click", function () {
-        applyWidth(setting, value, true);
+        applyValue(setting, value, true);
       });
       options.appendChild(button);
     });
@@ -150,8 +196,8 @@
     trigger.className = "docs-layout-widths__trigger";
     trigger.type = "button";
     trigger.textContent = "布局";
-    trigger.title = "调整文档布局宽度";
-    trigger.setAttribute("aria-label", "调整文档布局宽度");
+    trigger.title = "调整文档布局";
+    trigger.setAttribute("aria-label", "调整文档布局");
     trigger.setAttribute("aria-haspopup", "true");
     trigger.setAttribute("aria-expanded", "false");
 
@@ -159,7 +205,7 @@
     panel.className = "docs-layout-widths__panel";
     panel.hidden = true;
     panel.setAttribute("role", "group");
-    panel.setAttribute("aria-label", "文档布局宽度");
+    panel.setAttribute("aria-label", "文档布局");
 
     trigger.addEventListener("click", function (event) {
       var open = trigger.getAttribute("aria-expanded") !== "true";
@@ -191,7 +237,7 @@
     }
 
     settings.forEach(function (setting) {
-      applyWidth(setting, getStoredWidth(setting) || getCurrentWidth(setting), false);
+      applyValue(setting, getStoredValue(setting) || getCurrentValue(setting), false);
     });
   }
 
@@ -204,7 +250,9 @@
   }
 
   document.addEventListener("click", function (event) {
-    var switcher = event.target.closest("[data-md-component='docs-layout-widths']");
+    var switcher = event.target.closest
+      ? event.target.closest("[data-md-component='docs-layout-widths']")
+      : null;
     if (!switcher) {
       closePanels();
     }
