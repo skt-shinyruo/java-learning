@@ -91,28 +91,38 @@ extra:
     nav_width: compact
     content_width: compact
     toc_width: compact
+    letter_spacing: compact
 ```
 
-可选值从窄到宽依次为：
+宽度配置可选值从窄到宽依次为：
 
 - `compact`：当前默认宽度，也是最小层级
 - `comfortable`：中等加宽
 - `wide`：宽屏阅读
 - `full`：最大层级
 
-三个配置项分别控制：
+字距配置 `letter_spacing` 可选值为：
+
+- `compact`：浏览器默认字距
+- `normal`：轻微增加字距
+- `wide`：宽松字距
+- `extra`：最大字距
+
+四个配置项分别控制：
 
 - `nav_width`：左侧目录宽度
 - `content_width`：中间正文宽度
 - `toc_width`：右侧目录宽度
+- `letter_spacing`：中间正文的字符间距
 
-页面顶部的“布局”按钮也提供实时切换面板，可分别调整左侧目录、正文、右侧目录。用户选择会保存到浏览器 `localStorage`，下次打开文档页时会自动恢复；清空浏览器数据或保存值无效时，会回退到 `mkdocs.yml` 中的默认值。
+页面顶部的“布局”按钮也提供实时切换面板，可分别调整左侧目录、正文、右侧目录和正文字距。用户选择会保存到浏览器 `localStorage`，下次打开文档页时会自动恢复；清空浏览器数据或保存值无效时，会回退到 `mkdocs.yml` 中的默认值。
 
 对应的 `localStorage` 键为：
 
 - `java-learning-docs-nav-width`
 - `java-learning-docs-content-width`
 - `java-learning-docs-toc-width`
+- `java-learning-docs-letter-spacing`
 
 ## 校验数学公式渲染
 
@@ -128,4 +138,4 @@ mkdocs/scripts/verify_math.sh
 mkdocs/scripts/verify_layout_width.sh
 ```
 
-这个脚本会先执行一次构建，再检查生成后的 HTML 是否带有左侧目录、正文、右侧目录的当前宽度层级、早期恢复脚本和运行时切换脚本，以及 CSS 是否包含对应宽度层级规则。
+这个脚本会先执行一次构建，再检查生成后的 HTML 是否带有左侧目录、正文、右侧目录的当前宽度层级和正文字距层级、早期恢复脚本和运行时切换脚本，以及 CSS 是否包含对应宽度和字距层级规则。
