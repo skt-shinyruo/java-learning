@@ -52,6 +52,7 @@ extra:
     nav_width: compact
     content_width: compact
     toc_width: compact
+    letter_spacing: compact
 
 extra_javascript:
   - javascripts/layout-width.js

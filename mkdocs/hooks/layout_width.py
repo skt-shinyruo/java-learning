@@ -7,80 +7,96 @@ from mkdocs.config.defaults import MkDocsConfig
 
 
 ALLOWED_LAYOUT_WIDTHS = ("compact", "comfortable", "wide", "full")
+ALLOWED_LETTER_SPACINGS = ("compact", "normal", "wide", "extra")
 DEFAULT_LAYOUT_WIDTH = "compact"
-LAYOUT_WIDTHS = {
+DEFAULT_LETTER_SPACING = "compact"
+LAYOUT_SETTINGS = {
     "nav_width": {
         "attribute": "data-docs-nav-width",
         "storage_key": "java-learning-docs-nav-width",
+        "allowed": ALLOWED_LAYOUT_WIDTHS,
+        "default": DEFAULT_LAYOUT_WIDTH,
     },
     "content_width": {
         "attribute": "data-docs-content-width",
         "storage_key": "java-learning-docs-content-width",
+        "allowed": ALLOWED_LAYOUT_WIDTHS,
+        "default": DEFAULT_LAYOUT_WIDTH,
     },
     "toc_width": {
         "attribute": "data-docs-toc-width",
         "storage_key": "java-learning-docs-toc-width",
+        "allowed": ALLOWED_LAYOUT_WIDTHS,
+        "default": DEFAULT_LAYOUT_WIDTH,
+    },
+    "letter_spacing": {
+        "attribute": "data-docs-letter-spacing",
+        "storage_key": "java-learning-docs-letter-spacing",
+        "allowed": ALLOWED_LETTER_SPACINGS,
+        "default": DEFAULT_LETTER_SPACING,
     },
 }
 
 
-def _layout_width(config: MkDocsConfig, key: str) -> str:
+def _layout_setting(config: MkDocsConfig, key: str) -> str:
     layout = config.extra.get("layout", {})
-    width = layout.get(key, DEFAULT_LAYOUT_WIDTH)
+    meta = LAYOUT_SETTINGS[key]
+    value = layout.get(key, meta["default"])
 
-    if width not in ALLOWED_LAYOUT_WIDTHS:
-        values = ", ".join(ALLOWED_LAYOUT_WIDTHS)
+    if value not in meta["allowed"]:
+        values = ", ".join(meta["allowed"])
         raise ValueError(
-            f"extra.layout.{key} must be one of: {values}; got {width!r}"
+            f"extra.layout.{key} must be one of: {values}; got {value!r}"
         )
 
-    return width
+    return value
 
 
-def _layout_width_values(config: MkDocsConfig) -> dict[str, str]:
-    return {key: _layout_width(config, key) for key in LAYOUT_WIDTHS}
+def _layout_setting_values(config: MkDocsConfig) -> dict[str, str]:
+    return {key: _layout_setting(config, key) for key in LAYOUT_SETTINGS}
 
 
 def on_config(config: MkDocsConfig) -> MkDocsConfig:
     layout = config.extra.setdefault("layout", {})
-    for key in LAYOUT_WIDTHS:
-        layout.setdefault(key, DEFAULT_LAYOUT_WIDTH)
-    _layout_width_values(config)
+    for key, meta in LAYOUT_SETTINGS.items():
+        layout.setdefault(key, meta["default"])
+    _layout_setting_values(config)
     return config
 
 
-def _restore_script(widths: dict[str, str]) -> str:
+def _restore_script(values: dict[str, str]) -> str:
     settings = [
         {
             "attribute": meta["attribute"],
             "storageKey": meta["storage_key"],
-            "defaultValue": widths[key],
+            "defaultValue": values[key],
+            "allowed": {value: True for value in meta["allowed"]},
         }
-        for key, meta in LAYOUT_WIDTHS.items()
+        for key, meta in LAYOUT_SETTINGS.items()
     ]
     settings_json = json.dumps(settings, separators=(",", ":"))
     return f"""<script id="docs-layout-width-restore">
   (function() {{
-    var allowed = {{"compact": true, "comfortable": true, "wide": true, "full": true}};
     var settings = {settings_json};
     settings.forEach(function(setting) {{
-      var width = setting.defaultValue;
+      var value = setting.defaultValue;
       try {{
         var stored = localStorage.getItem(setting.storageKey);
-        if (allowed[stored]) {{
-          width = stored;
+        if (Object.prototype.hasOwnProperty.call(setting.allowed, stored)) {{
+          value = stored;
         }}
       }} catch (error) {{}}
-      document.documentElement.setAttribute(setting.attribute, width);
+      document.documentElement.setAttribute(setting.attribute, value);
     }});
   }})();
 </script>"""
 
 
 def on_post_page(output: str, *, page, config: MkDocsConfig) -> str:
-    widths = _layout_width_values(config)
+    values = _layout_setting_values(config)
     attributes = " ".join(
-        f'{meta["attribute"]}="{widths[key]}"' for key, meta in LAYOUT_WIDTHS.items()
+        f'{meta["attribute"]}="{values[key]}"'
+        for key, meta in LAYOUT_SETTINGS.items()
     )
     output = re.sub(
         r"(<html\b(?![^>]*\bdata-docs-nav-width=)[^>]*)(>)",
@@ -89,5 +105,5 @@ def on_post_page(output: str, *, page, config: MkDocsConfig) -> str:
         count=1,
     )
     if 'id="docs-layout-width-restore"' not in output:
-        output = output.replace("<head>", f"<head>\n    {_restore_script(widths)}", 1)
+        output = output.replace("<head>", f"<head>\n    {_restore_script(values)}", 1)
     return output
