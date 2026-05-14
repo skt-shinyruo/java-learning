@@ -15,6 +15,9 @@ CONFIGURED_CONTENT_WIDTH="$(
 CONFIGURED_TOC_WIDTH="$(
   awk '/^[[:space:]]+toc_width:/ { print $2; exit }' "$ROOT_DIR/mkdocs/mkdocs.yml"
 )"
+CONFIGURED_LETTER_SPACING="$(
+  awk '/^[[:space:]]+letter_spacing:/ { print $2; exit }' "$ROOT_DIR/mkdocs/mkdocs.yml"
+)"
 
 cd "$ROOT_DIR"
 
@@ -27,6 +30,14 @@ for configured_width in "$CONFIGURED_NAV_WIDTH" "$CONFIGURED_CONTENT_WIDTH" "$CO
       ;;
   esac
 done
+
+case "$CONFIGURED_LETTER_SPACING" in
+  compact|normal|wide|extra) ;;
+  *)
+    echo "Invalid docs letter spacing in mkdocs.yml: $CONFIGURED_LETTER_SPACING"
+    exit 1
+    ;;
+esac
 
 mkdocs build -f mkdocs/mkdocs.yml >/dev/null
 
@@ -49,6 +60,11 @@ fi
 
 if ! grep -Fq "data-docs-toc-width=\"$CONFIGURED_TOC_WIDTH\"" "$OUTPUT_HTML"; then
   echo "Missing docs toc width attribute on generated HTML element: $CONFIGURED_TOC_WIDTH."
+  exit 1
+fi
+
+if ! grep -Fq "data-docs-letter-spacing=\"$CONFIGURED_LETTER_SPACING\"" "$OUTPUT_HTML"; then
+  echo "Missing docs letter spacing attribute on generated HTML element: $CONFIGURED_LETTER_SPACING."
   exit 1
 fi
 
@@ -79,6 +95,13 @@ for width in compact comfortable wide full; do
   fi
 done
 
+for spacing in compact normal wide extra; do
+  if ! grep -Fq "html[data-docs-letter-spacing=\"$spacing\"]" "$EXTRA_CSS"; then
+    echo "Missing CSS rule for docs letter spacing: $spacing."
+    exit 1
+  fi
+done
+
 if ! grep -Fq "var(--docs-content-grid-width)" "$EXTRA_CSS"; then
   echo "Missing content width variable in grid calculation."
   exit 1
@@ -91,6 +114,16 @@ fi
 
 if ! grep -Fq "var(--docs-toc-width)" "$EXTRA_CSS"; then
   echo "Missing toc width variable in grid calculation."
+  exit 1
+fi
+
+if ! grep -Fq -- "--docs-letter-spacing" "$EXTRA_CSS"; then
+  echo "Missing letter spacing CSS variable."
+  exit 1
+fi
+
+if ! grep -Fq ".md-content__inner" "$EXTRA_CSS"; then
+  echo "Missing article content selector for docs letter spacing."
   exit 1
 fi
 
@@ -122,7 +155,8 @@ fi
 for storage_key in \
   java-learning-docs-nav-width \
   java-learning-docs-content-width \
-  java-learning-docs-toc-width
+  java-learning-docs-toc-width \
+  java-learning-docs-letter-spacing
 do
   if ! grep -Fq "$storage_key" "$OUTPUT_HTML"; then
     echo "Missing localStorage key in early restore script: $storage_key."
@@ -150,6 +184,16 @@ if ! grep -Fq 'data-docs-layout-width-value' "$LAYOUT_JS"; then
   exit 1
 fi
 
+if ! grep -Fq 'data-docs-layout-setting-target' "$LAYOUT_JS"; then
+  echo "Missing runtime docs layout setting target markers."
+  exit 1
+fi
+
+if ! grep -Fq 'data-docs-layout-setting-value' "$LAYOUT_JS"; then
+  echo "Missing runtime docs layout setting value markers."
+  exit 1
+fi
+
 if ! grep -Fq 'docs-layout-widths__trigger' "$LAYOUT_JS"; then
   echo "Missing compact layout switcher trigger button."
   exit 1
@@ -160,7 +204,7 @@ if ! grep -Fq 'docs-layout-widths__panel' "$LAYOUT_JS"; then
   exit 1
 fi
 
-for label in 布局 左侧目录 正文 右侧目录 紧凑 中等 最大; do
+for label in 布局 左侧目录 正文 右侧目录 字距 紧凑 中等 宽屏 常规 宽松 最大; do
   if ! grep -Fq "$label" "$LAYOUT_JS"; then
     echo "Missing readable layout switcher label: $label."
     exit 1
