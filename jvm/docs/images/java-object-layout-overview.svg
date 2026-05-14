@@ -1,0 +1,94 @@
+<svg class="doc-diagram" viewBox="0 0 980 420" role="img" aria-label="Java 引用、对象实例、类元数据和 JIT 代码之间的关系" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .doc-diagram {
+      --dg-surface: #f8fafc;
+      --dg-panel: #ffffff;
+      --dg-border: #cbd5e1;
+      --dg-text: #172033;
+      --dg-muted: #334155;
+      --dg-accent: #0369a1;
+      color: var(--dg-muted);
+    }
+    @media (prefers-color-scheme: dark) {
+      .doc-diagram {
+        --dg-surface: #0f172a;
+        --dg-panel: #111827;
+        --dg-border: #475569;
+        --dg-text: #e5e7eb;
+        --dg-muted: #cbd5e1;
+        --dg-accent: #38bdf8;
+      }
+    }
+    .dg-area {
+      fill: var(--dg-surface);
+      stroke: var(--dg-border);
+      stroke-width: 1.5;
+    }
+    .dg-box {
+      fill: var(--dg-panel);
+      stroke: var(--dg-border);
+      stroke-width: 1.5;
+    }
+    .dg-title {
+      fill: var(--dg-text);
+      font: 700 16px sans-serif;
+    }
+    .dg-text {
+      fill: var(--dg-muted);
+      font: 14px sans-serif;
+    }
+    .dg-small {
+      fill: var(--dg-muted);
+      font: 12px monospace;
+    }
+    .dg-arrow {
+      stroke: var(--dg-accent);
+      stroke-width: 1.8;
+      fill: none;
+      marker-end: url(#arrow);
+    }
+    .dg-marker {
+      fill: var(--dg-accent);
+    }
+  </style>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path class="dg-marker" d="M0,0 L0,6 L9,3 z"/>
+    </marker>
+  </defs>
+
+  <rect class="dg-area" x="30" y="40" width="220" height="140" rx="8"/>
+  <text class="dg-title" x="45" y="70">Java 栈 / 寄存器</text>
+  <text class="dg-text" x="45" y="105">局部变量 x（oop/ref）</text>
+  <text class="dg-text" x="45" y="130">保存对象地址 / 编码值</text>
+
+  <rect class="dg-area" x="330" y="35" width="260" height="220" rx="8"/>
+  <text class="dg-title" x="350" y="65">Java Heap</text>
+  <rect class="dg-box" x="355" y="90" width="210" height="135" rx="6"/>
+  <text class="dg-text" x="375" y="118">对象实例：Foo</text>
+  <text class="dg-small" x="375" y="148">0..7   Mark Word</text>
+  <text class="dg-small" x="375" y="172">8..    Klass Pointer</text>
+  <text class="dg-small" x="375" y="196">...    实例字段</text>
+  <text class="dg-small" x="375" y="220">...    tail padding</text>
+
+  <rect class="dg-area" x="670" y="35" width="260" height="245" rx="8"/>
+  <text class="dg-title" x="690" y="65">Metaspace</text>
+  <rect class="dg-box" x="695" y="90" width="210" height="160" rx="6"/>
+  <text class="dg-text" x="715" y="118">Klass 元数据：Foo</text>
+  <text class="dg-small" x="715" y="148">字段布局 / offset</text>
+  <text class="dg-small" x="715" y="172">ConstantPool</text>
+  <text class="dg-small" x="715" y="196">Method* / bytecode</text>
+  <text class="dg-small" x="715" y="220">vtable / itable</text>
+
+  <rect class="dg-area" x="730" y="325" width="150" height="60" rx="8"/>
+  <text class="dg-title" x="765" y="360">CodeCache</text>
+
+  <path class="dg-arrow" d="M250 115 C285 115, 295 155, 355 155"/>
+  <text class="dg-small" x="260" y="105">oop/ref</text>
+
+  <path class="dg-arrow" d="M565 172 C610 172, 635 170, 695 170"/>
+  <text class="dg-small" x="595" y="160">klass ptr</text>
+
+  <path class="dg-arrow" d="M800 250 L800 325"/>
+  <text class="dg-small" x="815" y="295">JIT 入口</text>
+</svg>

@@ -6,6 +6,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 OUTPUT_HTML="$ROOT_DIR/mkdocs/site/nio/content/nio-direct-memory/index.html"
 EXTRA_CSS="$ROOT_DIR/mkdocs/site/stylesheets/extra.css"
 LAYOUT_JS="$ROOT_DIR/mkdocs/site/javascripts/layout-width.js"
+BACK_TO_TOP_JS="$ROOT_DIR/mkdocs/site/javascripts/back-to-top.js"
 CONFIGURED_NAV_WIDTH="$(
   awk '/^[[:space:]]+nav_width:/ { print $2; exit }' "$ROOT_DIR/mkdocs/mkdocs.yml"
 )"
@@ -41,7 +42,7 @@ esac
 
 mkdocs build -f mkdocs/mkdocs.yml >/dev/null
 
-for file in "$OUTPUT_HTML" "$EXTRA_CSS" "$LAYOUT_JS"; do
+for file in "$OUTPUT_HTML" "$EXTRA_CSS" "$LAYOUT_JS" "$BACK_TO_TOP_JS"; do
   if [ ! -f "$file" ]; then
     echo "Missing generated file: $file"
     exit 1
@@ -75,6 +76,11 @@ fi
 
 if ! grep -Fq 'javascripts/layout-width.js' "$OUTPUT_HTML"; then
   echo "Missing runtime docs layout width switcher script in generated HTML."
+  exit 1
+fi
+
+if ! grep -Fq 'javascripts/back-to-top.js' "$OUTPUT_HTML"; then
+  echo "Missing runtime back-to-top behavior script in generated HTML."
   exit 1
 fi
 
@@ -213,6 +219,71 @@ done
 
 if ! grep -Fq '.docs-layout-widths__panel' "$EXTRA_CSS"; then
   echo "Missing layout switcher panel styles."
+  exit 1
+fi
+
+if ! grep -Fq 'body[dir="ltr"] .md-top' "$EXTRA_CSS"; then
+  echo "Missing back-to-top button override."
+  exit 1
+fi
+
+if ! grep -Fq "position: fixed;" "$EXTRA_CSS"; then
+  echo "Back-to-top button must be fixed."
+  exit 1
+fi
+
+if ! grep -Fq "top: auto !important;" "$EXTRA_CSS"; then
+  echo "Back-to-top button must override the theme inline top position."
+  exit 1
+fi
+
+if ! grep -Fq "right: 1rem;" "$EXTRA_CSS"; then
+  echo "Back-to-top button must be anchored to the right."
+  exit 1
+fi
+
+if ! grep -Fq "bottom: 1rem;" "$EXTRA_CSS"; then
+  echo "Back-to-top button must be anchored to the bottom."
+  exit 1
+fi
+
+if ! grep -Fq "border-radius: 999rem;" "$EXTRA_CSS"; then
+  echo "Back-to-top button must be circular."
+  exit 1
+fi
+
+if ! grep -Fq "font-size: 0;" "$EXTRA_CSS"; then
+  echo "Back-to-top button text must be hidden."
+  exit 1
+fi
+
+if ! grep -Fq "opacity: 1;" "$EXTRA_CSS"; then
+  echo "Back-to-top button must force visible opacity outside the top of the page."
+  exit 1
+fi
+
+if ! grep -Fq "margin-left: 0;" "$EXTRA_CSS"; then
+  echo "Back-to-top button must clear centered theme margin."
+  exit 1
+fi
+
+if ! grep -Fq ".md-top svg" "$EXTRA_CSS"; then
+  echo "Back-to-top button icon must be sized explicitly."
+  exit 1
+fi
+
+if ! grep -Fq 'window.scrollY > 0' "$BACK_TO_TOP_JS"; then
+  echo "Back-to-top button must be visible whenever the page is not at the top."
+  exit 1
+fi
+
+if ! grep -Fq 'toggleAttribute("hidden"' "$BACK_TO_TOP_JS"; then
+  echo "Back-to-top button script must control the hidden attribute."
+  exit 1
+fi
+
+if ! grep -Fq "MutationObserver" "$BACK_TO_TOP_JS"; then
+  echo "Back-to-top button script must keep theme updates from rehiding it away from the top."
   exit 1
 fi
 

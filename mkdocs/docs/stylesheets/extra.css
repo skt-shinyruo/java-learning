@@ -242,6 +242,55 @@ html .md-grid {
   }
 }
 
+body[dir="ltr"] .md-top,
+body[dir="rtl"] .md-top {
+  position: fixed;
+  top: auto !important;
+  right: 1rem;
+  bottom: 1rem;
+  left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  margin: 0;
+  margin-left: 0;
+  margin-right: 0;
+  padding: 0;
+  border-radius: 999rem;
+  background-color: var(--md-default-bg-color);
+  color: var(--md-default-fg-color--light);
+  font-size: 0;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+body[dir="ltr"] .md-top[hidden],
+body[dir="rtl"] .md-top[hidden] {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(0.2rem);
+}
+
+body .md-top svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  margin: 0;
+}
+
+body[dir="rtl"] .md-top,
+body[dir="rtl"] .md-top[hidden] {
+  right: auto;
+  left: 1rem;
+  transform: translateY(0);
+}
+
+body[dir="rtl"] .md-top[hidden] {
+  transform: translateY(0.2rem);
+}
+
 .doc-diagram {
   --dg-surface: #f8fafc;
   --dg-panel: #ffffff;
