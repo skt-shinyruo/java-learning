@@ -22,6 +22,7 @@ html {
   --docs-nav-width: 12.1rem;
   --docs-content-grid-width: 61rem;
   --docs-toc-width: 12.1rem;
+  --docs-letter-spacing: normal;
 }
 
 html[data-docs-nav-width="compact"] {
@@ -70,6 +71,37 @@ html[data-docs-toc-width="wide"] {
 
 html[data-docs-toc-width="full"] {
   --docs-toc-width: 18rem;
+}
+
+html[data-docs-letter-spacing="compact"] {
+  --docs-letter-spacing: normal;
+}
+
+html[data-docs-letter-spacing="normal"] {
+  --docs-letter-spacing: 0.02em;
+}
+
+html[data-docs-letter-spacing="wide"] {
+  --docs-letter-spacing: 0.04em;
+}
+
+html[data-docs-letter-spacing="extra"] {
+  --docs-letter-spacing: 0.06em;
+}
+
+.md-content__inner > p,
+.md-content__inner > ul,
+.md-content__inner > ol,
+.md-content__inner > blockquote,
+.md-content__inner > table {
+  letter-spacing: var(--docs-letter-spacing);
+}
+
+.md-content__inner code,
+.md-content__inner kbd,
+.md-content__inner pre,
+.md-content__inner .arithmatex {
+  letter-spacing: normal;
 }
 
 html .md-grid {
