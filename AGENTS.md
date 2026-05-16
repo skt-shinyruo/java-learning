@@ -21,7 +21,7 @@ Run commands from the repository root.
 
 Use UTF-8 and Java 8-compatible APIs. Follow the existing Java style: 4-space indentation, braces on the same line, `PascalCase` classes, `camelCase` methods and fields, and uppercase enum constants. Keep examples small and focused; this repo favors readable learning code over framework-heavy abstractions.
 
-No formatter or linter is configured, so match nearby code. Markdown docs should use clear headings, fenced code blocks, and relative links.
+No formatter or linter is configured, so match nearby code. Markdown docs should use clear headings, fenced code blocks, and relative links. Numbered Markdown headings should use numeric dot form such as `## 1. Topic`, not parenthesized form such as `## 1) Topic`.
 
 ## Testing Guidelines
 
