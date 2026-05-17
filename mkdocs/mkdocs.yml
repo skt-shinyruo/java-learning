@@ -111,6 +111,7 @@ nav:
   - JVM:
       - Overview: jvm/index.md
       - JVM Memory: jvm/content/jvm-memory.md
+      - Class 文件结构: jvm/content/class-file-structure.md
       - GC:
           - HotSpot OopMap 与 GC Roots: jvm/content/gc/oopmap-gc-roots.md
           - ZGC 收集器: jvm/content/gc/zgc.md
