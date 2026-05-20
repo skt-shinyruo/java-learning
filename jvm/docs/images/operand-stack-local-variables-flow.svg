@@ -1,0 +1,220 @@
+<svg class="doc-diagram" viewBox="0 0 1440 1040" role="img" aria-label="JVM 执行 iload aload getfield invokevirtual iadd istore 时局部变量表、操作数栈和被调用栈帧的变化" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .doc-diagram {
+      --dg-surface: #f8fafc;
+      --dg-panel: #ffffff;
+      --dg-border: #cbd5e1;
+      --dg-text: #172033;
+      --dg-muted: #334155;
+      --dg-accent: #0369a1;
+      --dg-blue: #eff6ff;
+      --dg-blue-border: #93c5fd;
+      --dg-green: #ecfdf5;
+      --dg-green-border: #86efac;
+      --dg-orange: #fff7ed;
+      --dg-orange-border: #fdba74;
+      --dg-purple: #f5f3ff;
+      --dg-purple-border: #c4b5fd;
+      --dg-yellow: #fefce8;
+      --dg-yellow-border: #fde047;
+      color: var(--dg-muted);
+    }
+    @media (prefers-color-scheme: dark) {
+      .doc-diagram {
+        --dg-surface: #0f172a;
+        --dg-panel: #111827;
+        --dg-border: #475569;
+        --dg-text: #e5e7eb;
+        --dg-muted: #cbd5e1;
+        --dg-accent: #38bdf8;
+        --dg-blue: #172554;
+        --dg-blue-border: #2563eb;
+        --dg-green: #052e2b;
+        --dg-green-border: #0f766e;
+        --dg-orange: #431407;
+        --dg-orange-border: #c2410c;
+        --dg-purple: #2e1065;
+        --dg-purple-border: #7e22ce;
+        --dg-yellow: #422006;
+        --dg-yellow-border: #ca8a04;
+      }
+    }
+    .dg-surface { fill: var(--dg-surface); stroke: var(--dg-border); stroke-width: 1.4; }
+    .dg-panel { fill: var(--dg-panel); stroke: var(--dg-border); stroke-width: 1.3; }
+    .dg-blue { fill: var(--dg-blue); stroke: var(--dg-blue-border); stroke-width: 1.4; }
+    .dg-green { fill: var(--dg-green); stroke: var(--dg-green-border); stroke-width: 1.5; }
+    .dg-orange { fill: var(--dg-orange); stroke: var(--dg-orange-border); stroke-width: 1.4; }
+    .dg-purple { fill: var(--dg-purple); stroke: var(--dg-purple-border); stroke-width: 1.4; }
+    .dg-yellow { fill: var(--dg-yellow); stroke: var(--dg-yellow-border); stroke-width: 1.4; }
+    .dg-slot { fill: var(--dg-blue); stroke: var(--dg-blue-border); stroke-width: 1; }
+    .dg-slot-change { fill: var(--dg-green); stroke: var(--dg-green-border); stroke-width: 1.2; }
+    .dg-stack-cell { fill: var(--dg-purple); stroke: var(--dg-purple-border); stroke-width: 1; }
+    .dg-empty { fill: transparent; stroke: var(--dg-border); stroke-width: 1; stroke-dasharray: 4 4; }
+    .dg-title { font: 700 25px sans-serif; fill: var(--dg-text); }
+    .dg-section-title { font: 700 16px sans-serif; fill: var(--dg-text); }
+    .dg-step-title { font: 700 13px sans-serif; fill: var(--dg-text); }
+    .dg-label { font: 12px sans-serif; fill: var(--dg-muted); }
+    .dg-small { font: 11px sans-serif; fill: var(--dg-muted); }
+    .dg-code { font: 12px monospace; fill: var(--dg-muted); }
+    .dg-code-small { font: 11px monospace; fill: var(--dg-muted); }
+    .dg-code-strong { font: 700 12px monospace; fill: var(--dg-text); }
+    .dg-arrow { stroke: var(--dg-accent); stroke-width: 1.8; fill: none; marker-end: url(#arrow); }
+    .dg-dash { stroke-dasharray: 6 5; }
+    .dg-marker { fill: var(--dg-accent); }
+  </style>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path class="dg-marker" d="M0,0 L0,6 L9,3 z"/>
+    </marker>
+  </defs>
+
+  <rect x="20" y="20" width="1400" height="1000" rx="14" class="dg-surface"/>
+  <text x="720" y="58" text-anchor="middle" class="dg-title">base + value.intValue() 的真实栈帧变化</text>
+
+  <rect x="54" y="90" width="360" height="230" rx="12" class="dg-panel"/>
+  <text x="234" y="120" text-anchor="middle" class="dg-section-title">调用者栈帧：compute</text>
+  <text x="74" y="148" class="dg-code">Code: max_locals=8, max_stack=5</text>
+  <text x="74" y="172" class="dg-label">局部变量表初始状态</text>
+  <rect x="74" y="190" width="74" height="48" rx="6" class="dg-slot"/>
+  <text x="111" y="211" text-anchor="middle" class="dg-code-strong">slot0</text>
+  <text x="111" y="230" text-anchor="middle" class="dg-code-small">ref this</text>
+  <rect x="154" y="190" width="74" height="48" rx="6" class="dg-slot"/>
+  <text x="191" y="211" text-anchor="middle" class="dg-code-strong">slot1</text>
+  <text x="191" y="230" text-anchor="middle" class="dg-code-small">int 10</text>
+  <rect x="234" y="190" width="74" height="48" rx="6" class="dg-slot"/>
+  <text x="271" y="211" text-anchor="middle" class="dg-code-strong">slot2</text>
+  <text x="271" y="230" text-anchor="middle" class="dg-code-small">ref tags</text>
+  <rect x="314" y="190" width="74" height="48" rx="6" class="dg-empty"/>
+  <text x="351" y="211" text-anchor="middle" class="dg-code-strong">slot3</text>
+  <text x="351" y="230" text-anchor="middle" class="dg-code-small">empty</text>
+  <text x="74" y="276" class="dg-label">操作数栈初始为空；下方每一步显示执行后的栈内容</text>
+
+  <rect x="456" y="90" width="440" height="230" rx="12" class="dg-orange"/>
+  <text x="676" y="120" text-anchor="middle" class="dg-section-title">动态链接和堆对象</text>
+  <text x="482" y="150" class="dg-code">getfield #1  -&gt; ClassFileTour.value:Number</text>
+  <text x="482" y="176" class="dg-code">invokevirtual #42 -&gt; Number.intValue():int</text>
+  <rect x="482" y="202" width="168" height="56" rx="8" class="dg-panel"/>
+  <text x="566" y="226" text-anchor="middle" class="dg-code-strong">this object</text>
+  <text x="566" y="246" text-anchor="middle" class="dg-code-small">field value</text>
+  <rect x="694" y="202" width="168" height="56" rx="8" class="dg-panel"/>
+  <text x="778" y="226" text-anchor="middle" class="dg-code-strong">Number object</text>
+  <text x="778" y="246" text-anchor="middle" class="dg-code-small">intValue returns 7</text>
+  <path d="M650 230 L694 230" class="dg-arrow"/>
+
+  <rect x="938" y="90" width="448" height="230" rx="12" class="dg-yellow"/>
+  <text x="1162" y="120" text-anchor="middle" class="dg-section-title">关键点</text>
+  <text x="964" y="154" class="dg-label">1. load 指令复制局部变量槽位中的值到操作数栈。</text>
+  <text x="964" y="180" class="dg-label">2. getfield 消耗 objectref，读取实例字段，再压入字段值。</text>
+  <text x="964" y="206" class="dg-label">3. invokevirtual 会让被调用方法拥有自己的栈帧。</text>
+  <text x="964" y="232" class="dg-label">4. 被调用方法返回后，返回值压回调用者操作数栈。</text>
+  <text x="964" y="258" class="dg-label">5. istore 弹出栈顶值，写入当前帧局部变量表。</text>
+
+  <g transform="translate(54,365)">
+    <rect width="190" height="200" rx="10" class="dg-blue"/>
+    <text x="95" y="27" text-anchor="middle" class="dg-step-title">pc=0  iload_1</text>
+    <text x="18" y="58" class="dg-label">读取 slot1</text>
+    <rect x="18" y="76" width="154" height="34" rx="6" class="dg-slot-change"/>
+    <text x="95" y="98" text-anchor="middle" class="dg-code-strong">slot1: int 10</text>
+    <text x="18" y="136" class="dg-label">操作数栈 bottom -&gt; top</text>
+    <rect x="18" y="152" width="154" height="30" rx="5" class="dg-stack-cell"/>
+    <text x="95" y="172" text-anchor="middle" class="dg-code-strong">int 10</text>
+  </g>
+
+  <g transform="translate(268,365)">
+    <rect width="190" height="200" rx="10" class="dg-blue"/>
+    <text x="95" y="27" text-anchor="middle" class="dg-step-title">pc=1  aload_0</text>
+    <text x="18" y="58" class="dg-label">读取 slot0</text>
+    <rect x="18" y="76" width="154" height="34" rx="6" class="dg-slot-change"/>
+    <text x="95" y="98" text-anchor="middle" class="dg-code-strong">slot0: ref this</text>
+    <text x="18" y="136" class="dg-label">操作数栈 bottom -&gt; top</text>
+    <rect x="18" y="152" width="70" height="30" rx="5" class="dg-stack-cell"/>
+    <text x="53" y="172" text-anchor="middle" class="dg-code">int 10</text>
+    <rect x="100" y="152" width="72" height="30" rx="5" class="dg-stack-cell"/>
+    <text x="136" y="172" text-anchor="middle" class="dg-code-strong">ref this</text>
+  </g>
+
+  <g transform="translate(482,365)">
+    <rect width="220" height="200" rx="10" class="dg-green"/>
+    <text x="110" y="27" text-anchor="middle" class="dg-step-title">pc=2  getfield #1</text>
+    <text x="18" y="58" class="dg-label">弹出 objectref this</text>
+    <text x="18" y="82" class="dg-label">通过常量池 #1 定位字段 value</text>
+    <text x="18" y="106" class="dg-label">把字段值 ref Number 压栈</text>
+    <text x="18" y="136" class="dg-label">操作数栈 bottom -&gt; top</text>
+    <rect x="18" y="152" width="76" height="30" rx="5" class="dg-stack-cell"/>
+    <text x="56" y="172" text-anchor="middle" class="dg-code">int 10</text>
+    <rect x="104" y="152" width="98" height="30" rx="5" class="dg-stack-cell"/>
+    <text x="153" y="172" text-anchor="middle" class="dg-code-strong">ref Number</text>
+  </g>
+
+  <g transform="translate(736,365)">
+    <rect width="310" height="260" rx="10" class="dg-orange"/>
+    <text x="155" y="27" text-anchor="middle" class="dg-step-title">pc=5  invokevirtual #42</text>
+    <text x="22" y="58" class="dg-label">调用者 compute 帧暂停，弹出 receiver ref Number</text>
+    <rect x="22" y="82" width="266" height="114" rx="9" class="dg-panel"/>
+    <text x="155" y="108" text-anchor="middle" class="dg-section-title">新栈帧：Number.intValue</text>
+    <rect x="44" y="128" width="98" height="36" rx="6" class="dg-slot-change"/>
+    <text x="93" y="151" text-anchor="middle" class="dg-code-strong">slot0 ref this</text>
+    <rect x="154" y="128" width="112" height="36" rx="6" class="dg-empty"/>
+    <text x="210" y="151" text-anchor="middle" class="dg-code">operand stack</text>
+    <text x="44" y="184" class="dg-small">ireturn 弹出 int 7，被调用帧出栈</text>
+    <text x="22" y="222" class="dg-label">返回后调用者操作数栈</text>
+    <rect x="22" y="238" width="120" height="30" rx="5" class="dg-stack-cell"/>
+    <text x="82" y="258" text-anchor="middle" class="dg-code">int 10</text>
+    <rect x="154" y="238" width="134" height="30" rx="5" class="dg-stack-cell"/>
+    <text x="221" y="258" text-anchor="middle" class="dg-code-strong">int 7</text>
+  </g>
+
+  <g transform="translate(1080,365)">
+    <rect width="150" height="200" rx="10" class="dg-purple"/>
+    <text x="75" y="27" text-anchor="middle" class="dg-step-title">pc=8  iadd</text>
+    <text x="18" y="58" class="dg-label">弹出 7</text>
+    <text x="18" y="82" class="dg-label">弹出 10</text>
+    <text x="18" y="106" class="dg-label">计算 10 + 7</text>
+    <text x="18" y="136" class="dg-label">操作数栈</text>
+    <rect x="18" y="152" width="114" height="30" rx="5" class="dg-stack-cell"/>
+    <text x="75" y="172" text-anchor="middle" class="dg-code-strong">int 17</text>
+  </g>
+
+  <g transform="translate(1256,365)">
+    <rect width="130" height="200" rx="10" class="dg-green"/>
+    <text x="65" y="27" text-anchor="middle" class="dg-step-title">pc=9 istore_3</text>
+    <text x="15" y="58" class="dg-label">弹出栈顶 17</text>
+    <text x="15" y="82" class="dg-label">写入 slot3</text>
+    <rect x="15" y="104" width="100" height="40" rx="6" class="dg-slot-change"/>
+    <text x="65" y="128" text-anchor="middle" class="dg-code-strong">slot3 int 17</text>
+    <text x="15" y="166" class="dg-label">操作数栈为空</text>
+  </g>
+
+  <path d="M244 465 L264 465" class="dg-arrow"/>
+  <path d="M458 465 L478 465" class="dg-arrow"/>
+  <path d="M702 465 L732 465" class="dg-arrow"/>
+  <path d="M1046 465 L1076 465" class="dg-arrow"/>
+  <path d="M1230 465 L1252 465" class="dg-arrow"/>
+
+  <rect x="54" y="675" width="650" height="250" rx="12" class="dg-panel"/>
+  <text x="379" y="705" text-anchor="middle" class="dg-section-title">执行结束后的 compute 栈帧局部变量表</text>
+  <rect x="88" y="740" width="120" height="56" rx="7" class="dg-slot"/>
+  <text x="148" y="763" text-anchor="middle" class="dg-code-strong">slot0</text>
+  <text x="148" y="784" text-anchor="middle" class="dg-code">ref this</text>
+  <rect x="224" y="740" width="120" height="56" rx="7" class="dg-slot"/>
+  <text x="284" y="763" text-anchor="middle" class="dg-code-strong">slot1</text>
+  <text x="284" y="784" text-anchor="middle" class="dg-code">int base=10</text>
+  <rect x="360" y="740" width="120" height="56" rx="7" class="dg-slot"/>
+  <text x="420" y="763" text-anchor="middle" class="dg-code-strong">slot2</text>
+  <text x="420" y="784" text-anchor="middle" class="dg-code">ref tags</text>
+  <rect x="496" y="740" width="120" height="56" rx="7" class="dg-slot-change"/>
+  <text x="556" y="763" text-anchor="middle" class="dg-code-strong">slot3</text>
+  <text x="556" y="784" text-anchor="middle" class="dg-code">int total=17</text>
+  <rect x="88" y="830" width="528" height="40" rx="7" class="dg-empty"/>
+  <text x="352" y="855" text-anchor="middle" class="dg-code">operand stack: empty</text>
+  <text x="88" y="900" class="dg-small">store 指令改变的是当前方法栈帧中的局部变量表，不会修改 Class 文件，也不会把值写入 Java 堆字段。</text>
+
+  <rect x="748" y="675" width="638" height="250" rx="12" class="dg-yellow"/>
+  <text x="1067" y="705" text-anchor="middle" class="dg-section-title">和真实 JVM 实现的关系</text>
+  <text x="780" y="742" class="dg-label">规范和字节码验证以局部变量表、操作数栈、当前帧为语义模型。</text>
+  <text x="780" y="772" class="dg-label">解释执行时，这个模型可以近似理解为真实执行过程。</text>
+  <text x="780" y="802" class="dg-label">HotSpot JIT 编译后，值可能被分配到 CPU 寄存器或本地栈槽中。</text>
+  <text x="780" y="832" class="dg-label">JIT 还可能内联 Number.intValue，使物理上不再创建独立调用栈帧。</text>
+  <text x="780" y="862" class="dg-label">但异常栈追踪、调试信息、GC 根定位和去优化仍要能恢复等价的 JVM 帧状态。</text>
+  <text x="780" y="892" class="dg-label">因此学习字节码时，应先按此语义模型理解，再区分具体 VM 的优化实现。</text>
+</svg>

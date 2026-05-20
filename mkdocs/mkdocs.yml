@@ -112,6 +112,9 @@ nav:
       - Overview: jvm/index.md
       - JVM Memory: jvm/content/jvm-memory.md
       - Class 文件结构: jvm/content/class-file-structure.md
+      - Class 文件高级结构: jvm/content/class-file-advanced-structures.md
+      - JVM 方法调用与返回指令: jvm/content/method-invocation-and-return.md
+      - MethodHandle 与 invokedynamic: jvm/content/method-handle-invokedynamic.md
       - GC:
           - HotSpot OopMap 与 GC Roots: jvm/content/gc/oopmap-gc-roots.md
           - ZGC 收集器: jvm/content/gc/zgc.md

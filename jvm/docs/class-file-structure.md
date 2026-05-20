@@ -74,48 +74,159 @@ ClassFile {
 
 ## 2. 具体示例
 
-用下面这个类观察 Class 文件结构：
+下面用一个覆盖面较广的 Java 8 示例观察 Class 文件结构。这个示例源码在 `jvm/src/main/java/yier/bubu/jvm/ClassFileTour.java`。它故意放进了泛型、接口、静态常量、实例字段初始化、静态初始化、可变参数、异常声明、注解、类型注解、lambda、匿名内部类和局部类。这样后面分析常量池、字段表、方法表和属性表时，可以尽量围绕同一个例子展开。
 
 ```java
-public class Demo {
-    private int value = 10;
+package yier.bubu.jvm;
 
-    public int add(int x) {
-        return value + x;
+import java.io.Closeable;
+import java.io.IOException;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.IntSupplier;
+
+@RuntimeMark("class")
+public class ClassFileTour<T extends Number> implements Runnable, Closeable {
+    public static final int MAGIC = 7;
+    private static final String PREFIX = "score:";
+    private static int created;
+
+    @RuntimeMark("field")
+    private @TypeMark("generic-field") T value;
+    private final List<String> history = new ArrayList<String>();
+
+    static {
+        created = MAGIC;
     }
+
+    public ClassFileTour(T value) {
+        this.value = value;
+        this.history.add(PREFIX + value);
+    }
+
+    @RuntimeMark("method")
+    public int compute(int base, String... tags) throws IOException {
+        int total = base + value.intValue();
+        for (String tag : tags) {
+            total += tag.length();
+        }
+
+        final int snapshot = total;
+
+        IntSupplier task = () -> snapshot + history.size();
+
+        Runnable printer = new Runnable() {
+            @Override
+            public void run() {
+                System.out.println(PREFIX + value);
+            }
+        };
+
+        class LocalFormatter {
+            private final int number;
+
+            LocalFormatter(int number) {
+                this.number = number;
+            }
+
+            String format() {
+                return PREFIX + number;
+            }
+        }
+
+        history.add(new LocalFormatter(total).format());
+        printer.run();
+        return task.getAsInt();
+    }
+
+    public int guardedLength(String text) {
+        try {
+            return text.length();
+        } catch (NullPointerException e) {
+            return -1;
+        } finally {
+            history.add("guarded");
+        }
+    }
+
+    public static ClassFileTour<Integer> of(int value) {
+        return new ClassFileTour<Integer>(value);
+    }
+
+    @Override
+    public void run() {
+        history.add("run");
+    }
+
+    @Override
+    public void close() throws IOException {
+        history.clear();
+    }
+}
+
+@Retention(RetentionPolicy.RUNTIME)
+@Target({ElementType.TYPE, ElementType.FIELD, ElementType.METHOD, ElementType.TYPE_USE})
+@interface RuntimeMark {
+    String value();
+
+    int level() default 1;
+}
+
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.TYPE_USE)
+@interface TypeMark {
+    String value();
 }
 ```
 
 编译并查看字节码：
 
 ```bash
-javac Demo.java
-javap -v Demo.class
+mvn -pl jvm -am -DskipTests package
+javap -v -p -classpath jvm/target/classes yier.bubu.jvm.ClassFileTour
 ```
 
-为了看见私有字段，也可以使用：
+如果要观察匿名内部类和局部类对应的 Class 文件，还可以继续看：
 
 ```bash
-javap -v -p Demo.class
+javap -v -p -classpath jvm/target/classes 'yier.bubu.jvm.ClassFileTour$1'
+javap -v -p -classpath jvm/target/classes 'yier.bubu.jvm.ClassFileTour$1LocalFormatter'
 ```
 
-如果使用 Java 8 目标版本编译，Class 文件主版本号通常是 `52`。不同 JDK 编译器、不同编译参数会让输出略有差异，例如是否包含 `LocalVariableTable`、是否生成调试行号信息，但核心结构不会变。
+如果使用 Java 8 目标版本编译，Class 文件主版本号是 `52`。不同 JDK 编译器、不同编译参数会让输出略有差异，例如常量池编号、是否包含 `LocalVariableTable`、是否生成调试行号信息，但核心结构不会变。
 
 这个例子的源码会被拆成几类信息：
 
 ```text
-Demo
-  ├── 类信息：public class Demo extends java/lang/Object
-  ├── 字段信息：private int value
-  ├── 构造方法：public Demo()
+ClassFileTour
+  ├── 类信息：public class ClassFileTour<T extends Number>
+  │     ├── extends java/lang/Object
+  │     └── implements Runnable, Closeable
+  ├── 字段信息：MAGIC、PREFIX、created、value、history
+  │     ├── MAGIC / PREFIX 有 ConstantValue
+  │     ├── value / history 有 Signature 保存泛型
+  │     └── value 上有运行时可见注解和类型注解
+  ├── 构造方法：public ClassFileTour(T)
   │     ├── 调用 Object.<init>()
-  │     └── 执行 this.value = 10
-  ├── 普通方法：public int add(int)
-  │     └── 执行 return this.value + x
-  └── 属性信息：SourceFile、Code、LineNumberTable 等
+  │     ├── 执行 history = new ArrayList<String>()
+  │     ├── 执行 this.value = value
+  │     └── 执行 history.add(PREFIX + value)
+  ├── 类初始化方法：static {}
+  │     └── 编译成 <clinit>，执行 created = MAGIC
+  ├── 普通方法：compute、guardedLength、of、run、close
+  │     ├── compute 有 ACC_VARARGS、Exceptions、Code、StackMapTable
+  │     ├── guardedLength 有 try-catch-finally 对应的异常表
+  │     ├── lambda 通过 invokedynamic 和 BootstrapMethods 连接
+  │     └── 匿名内部类、局部类会生成额外的 .class 文件
+  └── 属性信息：SourceFile、Signature、RuntimeVisibleAnnotations、
+                RuntimeVisibleTypeAnnotations、BootstrapMethods、InnerClasses 等
 ```
 
-需要注意：源码里的 `private int value = 10;` 看起来像字段的一部分，但实例字段初始化不是直接保存在字段表里，而是编译进构造方法的字节码。字段表只描述“有什么字段”，方法的 `Code` 属性才描述“运行时做什么”。
+需要注意：源码里的 `private final List<String> history = new ArrayList<String>();` 看起来像字段的一部分，但实例字段初始化不是直接保存在字段表里，而是编译进构造方法的字节码。字段表只描述“有什么字段”，方法的 `Code` 属性才描述“运行时做什么”。
 
 ---
 
@@ -219,7 +330,7 @@ cp_info {
 | `16` | `CONSTANT_MethodType` | 表示方法类型，只保存方法描述符 |
 | `18` | `CONSTANT_InvokeDynamic` | 表示动态调用点 |
 
-Java 9 以后又增加了模块相关常量，例如 `CONSTANT_Module` 和 `CONSTANT_Package`；Java 11 又增加了 `CONSTANT_Dynamic`。本仓库以 Java 8 学习为主，所以正文重点放在 Java 8 会直接遇到的结构上。
+Java 9 以后又增加了模块相关常量，例如 `CONSTANT_Module` 和 `CONSTANT_Package`；Java 11 又增加了 `CONSTANT_Dynamic`。本仓库以 Java 8 学习为主，所以正文重点放在 Java 8 会直接遇到的结构上。注解类型自身、枚举、接口、抽象类、真实异常表和 Java 9+ 扩展结构见 [Class 文件高级结构](class-file-advanced-structures.md)。
 
 ### 4.2 常量池条目的二进制结构
 
@@ -235,11 +346,11 @@ CONSTANT_Class_info {
 例如：
 
 ```text
-#3  = Class #19
-#19 = Utf8  Demo
+#2 = Class #4
+#4 = Utf8  yier/bubu/jvm/ClassFileTour
 ```
 
-`#3` 本身不保存 `Demo` 这几个字符，它只保存 `name_index = 19`，再由 `#19` 保存真正的文本。
+`#2` 本身不保存 `ClassFileTour` 这些字符，它只保存 `name_index = 4`，再由 `#4` 保存真正的内部名文本 `yier/bubu/jvm/ClassFileTour`。
 
 `CONSTANT_Fieldref`、`CONSTANT_Methodref` 和 `CONSTANT_InterfaceMethodref` 结构相同：
 
@@ -266,21 +377,21 @@ CONSTANT_InterfaceMethodref_info {
 例如：
 
 ```text
-#2  = Fieldref    #3.#18  // Demo.value:I
-#3  = Class       #19     // Demo
-#18 = NameAndType #5:#6   // value:I
-#5  = Utf8        value
-#6  = Utf8        I
+#1 = Fieldref    #2.#3  // yier/bubu/jvm/ClassFileTour.value:Ljava/lang/Number;
+#2 = Class       #4     // yier/bubu/jvm/ClassFileTour
+#3 = NameAndType #5:#6  // value:Ljava/lang/Number;
+#5 = Utf8        value
+#6 = Utf8        Ljava/lang/Number;
 ```
 
-这说明 `#2` 不是一个平铺字符串，而是一组引用关系：
+这说明 `#1` 不是一个平铺字符串，而是一组引用关系：
 
 ```text
-Fieldref #2
-  ├── class_index         -> #3  -> #19 -> Demo
-  └── name_and_type_index -> #18
+Fieldref #1
+  ├── class_index         -> #2 -> #4 -> yier/bubu/jvm/ClassFileTour
+  └── name_and_type_index -> #3
         ├── name_index       -> #5 -> value
-        └── descriptor_index -> #6 -> I
+        └── descriptor_index -> #6 -> Ljava/lang/Number;
 ```
 
 `CONSTANT_String` 表示字符串字面量：
@@ -349,16 +460,16 @@ CONSTANT_NameAndType_info {
 }
 ```
 
-例如字段 `value:I` 和方法 `add:(I)I` 都可以用 `NameAndType` 表示：
+例如字段 `value:Ljava/lang/Number;` 和方法 `compute:(I[Ljava/lang/String;)I` 都可以用 `NameAndType` 表示：
 
 ```text
 NameAndType
   ├── name_index       -> value
-  └── descriptor_index -> I
+  └── descriptor_index -> Ljava/lang/Number;
 
 NameAndType
-  ├── name_index       -> add
-  └── descriptor_index -> (I)I
+  ├── name_index       -> compute
+  └── descriptor_index -> (I[Ljava/lang/String;)I
 ```
 
 `CONSTANT_Utf8` 保存文本：
@@ -373,7 +484,7 @@ CONSTANT_Utf8_info {
 
 `length` 是字节数，不是 Java 字符数。Class 文件中的 `Utf8` 使用的是 JVM 规范定义的 modified UTF-8。类名、字段名、方法名、描述符、属性名最终都经常落到 `CONSTANT_Utf8` 上。
 
-`CONSTANT_MethodHandle`、`CONSTANT_MethodType` 和 `CONSTANT_InvokeDynamic` 主要服务于动态调用、lambda 和方法句柄：
+`CONSTANT_MethodHandle`、`CONSTANT_MethodType` 和 `CONSTANT_InvokeDynamic` 主要服务于动态调用、lambda 和方法句柄。运行时 API 与链接过程见 [MethodHandle 与 invokedynamic](method-handle-invokedynamic.md)：
 
 ```text
 CONSTANT_MethodHandle_info {
@@ -429,144 +540,140 @@ CONSTANT_Methodref
 
 ### 4.4 一个具体例子
 
-用下面这个类观察 Class 文件常量池：
-
-```java
-public class ConstantPoolDemo {
-    public static void main(String[] args) {
-        String s = "abc";
-        System.out.println(s);
-    }
-}
-```
-
-编译并查看 Class 文件：
-
-```bash
-javac ConstantPoolDemo.java
-javap -v ConstantPoolDemo.class
-```
-
-可以看到类似下面的常量池输出。不同 JDK 版本生成的条目编号可能略有差异，但组织方式一致。
+继续看 `ClassFileTour.class` 的常量池。下面只截取关键条目，真实输出里还有很多 `Utf8`、`NameAndType`、属性名和调试信息条目。不同 JDK 版本生成的条目编号可能略有差异，但组织方式一致。
 
 ```text
 Constant pool:
- #1 = Methodref          #4.#15  // java/lang/Object."<init>":()V
- #2 = Fieldref           #16.#17 // java/lang/System.out:Ljava/io/PrintStream;
- #3 = String             #18     // abc
- #4 = Class              #19     // java/lang/Object
- #5 = Class              #20     // ConstantPoolDemo
- #6 = Methodref          #21.#22 // java/io/PrintStream.println:(Ljava/lang/String;)V
-
-#16 = Class              #23     // java/lang/System
-#17 = NameAndType        #24:#25 // out:Ljava/io/PrintStream;
-#18 = Utf8               abc
-#19 = Utf8               java/lang/Object
-#20 = Utf8               ConstantPoolDemo
-#21 = Class              #26     // java/io/PrintStream
-#22 = NameAndType        #27:#28 // println:(Ljava/lang/String;)V
-#23 = Utf8               java/lang/System
-#24 = Utf8               out
-#25 = Utf8               Ljava/io/PrintStream;
-#26 = Utf8               java/io/PrintStream
-#27 = Utf8               println
-#28 = Utf8               (Ljava/lang/String;)V
+ #1 = Fieldref           #2.#3    // yier/bubu/jvm/ClassFileTour.value:Ljava/lang/Number;
+ #2 = Class              #4       // yier/bubu/jvm/ClassFileTour
+ #3 = NameAndType        #5:#6    // value:Ljava/lang/Number;
+ #7 = Methodref          #8.#9    // java/lang/Object."<init>":()V
+#16 = Fieldref           #2.#17   // yier/bubu/jvm/ClassFileTour.history:Ljava/util/List;
+#23 = String             #24      // score:
+#36 = InterfaceMethodref #37.#38  // java/util/List.add:(Ljava/lang/Object;)Z
+#42 = Methodref          #43.#44  // java/lang/Number.intValue:()I
+#53 = InvokeDynamic      #0:#54   // #0:getAsInt:(Lyier/bubu/jvm/ClassFileTour;I)Ljava/util/function/IntSupplier;
+#57 = Class              #58      // yier/bubu/jvm/ClassFileTour$1
+#62 = Class              #63      // yier/bubu/jvm/ClassFileTour$1LocalFormatter
+#75 = InterfaceMethodref #76.#77  // java/util/function/IntSupplier.getAsInt:()I
+#99 = Fieldref           #2.#100  // yier/bubu/jvm/ClassFileTour.created:I
 ```
 
 先看字符串字面量：
 
 ```text
-#3  = String #18
-#18 = Utf8   abc
+#23 = String #24
+#24 = Utf8   score:
 ```
 
-`#3` 是 `CONSTANT_String`，它并不直接保存字符内容，而是引用 `#18`。`#18` 是 `CONSTANT_Utf8`，保存文本 `abc`。
+`#23` 是 `CONSTANT_String`，它并不直接保存字符内容，而是引用 `#24`。`#24` 是 `CONSTANT_Utf8`，保存文本 `score:`。
 
 再看字段引用：
 
 ```text
-#2  = Fieldref    #16.#17
-#16 = Class       #23      // java/lang/System
-#17 = NameAndType #24:#25  // out:Ljava/io/PrintStream;
-#24 = Utf8        out
-#25 = Utf8        Ljava/io/PrintStream;
+#16 = Fieldref    #2.#17
+#2  = Class       #4       // yier/bubu/jvm/ClassFileTour
+#17 = NameAndType #18:#19  // history:Ljava/util/List;
+#18 = Utf8        history
+#19 = Utf8        Ljava/util/List;
 ```
 
-`#2` 表示字段 `java.lang.System.out`，它由两部分组成：
+`#16` 表示字段 `yier.bubu.jvm.ClassFileTour.history`，它由两部分组成：
 
-- 字段属于哪个类：`java/lang/System`
-- 字段名和字段描述符：`out:Ljava/io/PrintStream;`
+- 字段属于哪个类：`yier/bubu/jvm/ClassFileTour`
+- 字段名和字段描述符：`history:Ljava/util/List;`
 
 再看方法引用：
 
 ```text
-#6  = Methodref   #21.#22
-#21 = Class       #26      // java/io/PrintStream
-#22 = NameAndType #27:#28  // println:(Ljava/lang/String;)V
-#27 = Utf8        println
-#28 = Utf8        (Ljava/lang/String;)V
+#42 = Methodref   #43.#44
+#43 = Class       #45      // java/lang/Number
+#44 = NameAndType #46:#47  // intValue:()I
+#46 = Utf8        intValue
+#47 = Utf8        ()I
 ```
 
-`#6` 表示方法 `java.io.PrintStream.println(String)`，其中：
+`#42` 表示方法 `java.lang.Number.intValue()`，其中：
 
-- 方法所属类来自 `#21`。
-- 方法名 `println` 来自 `#27`。
-- 方法描述符 `(Ljava/lang/String;)V` 来自 `#28`。
+- 方法所属类来自 `#43`。
+- 方法名 `intValue` 来自 `#46`。
+- 方法描述符 `()I` 来自 `#47`。
+
+这个例子还出现了接口方法引用和动态调用点：
+
+```text
+#36 = InterfaceMethodref #37.#38  // java/util/List.add:(Ljava/lang/Object;)Z
+#53 = InvokeDynamic      #0:#54   // #0:getAsInt:(Lyier/bubu/jvm/ClassFileTour;I)Ljava/util/function/IntSupplier;
+```
+
+`InterfaceMethodref` 用于接口方法调用，例如 `List.add` 和 `IntSupplier.getAsInt`。`InvokeDynamic` 用于 lambda 表达式；它不会直接写死一个普通目标方法，而是通过 `BootstrapMethods` 属性找到引导方法，再在运行时创建调用点。
 
 ### 4.5 字节码怎么引用 Class 文件常量池
 
-同一个 `javap -v` 输出里，还能看到 `main` 方法的字节码：
+同一个 `javap -v` 输出里，还能看到构造方法和 `compute` 方法的字节码。构造方法中有一段：
 
 ```text
-0: ldc           #3
-2: astore_1
-3: getstatic     #2
-6: aload_1
-7: invokevirtual #6
-10: return
+20: aload_0
+21: getfield      #16  // Field history:Ljava/util/List;
+24: new           #20  // class java/lang/StringBuilder
+31: ldc           #23  // String score:
+43: invokeinterface #36,  2  // InterfaceMethod java/util/List.add:(Ljava/lang/Object;)Z
 ```
 
 逐条看：
 
 ```text
-ldc #3
+ldc #23
 ```
 
-表示从常量池第 `#3` 项加载常量，也就是字符串字面量 `"abc"`。
+表示从常量池第 `#23` 项加载常量，也就是字符串字面量 `"score:"`。
 
 ```text
-getstatic #2
+getfield #16
 ```
 
-表示读取常量池第 `#2` 项描述的静态字段，也就是：
+表示读取常量池第 `#16` 项描述的实例字段，也就是：
 
 ```java
-java.lang.System.out
+this.history
 ```
 
 ```text
-invokevirtual #6
+invokeinterface #36
 ```
 
-表示调用常量池第 `#6` 项描述的方法，也就是：
+表示调用常量池第 `#36` 项描述的接口方法，也就是：
 
 ```java
-java.io.PrintStream.println(String)
+java.util.List.add(Object)
+```
+
+`compute` 方法中的 lambda 会生成 `invokedynamic`：
+
+```text
+52: aload_0
+53: iload         4
+55: invokedynamic #53,  0
+    // InvokeDynamic #0:getAsInt:(Lyier/bubu/jvm/ClassFileTour;I)Ljava/util/function/IntSupplier;
 ```
 
 所以这个例子的关系可以整理成：
 
 ```text
-ConstantPoolDemo.class
+ClassFileTour.class
   └── constant_pool
-        ├── #3  -> "abc"
-        ├── #2  -> System.out
-        └── #6  -> PrintStream.println(String)
+        ├── #23 -> "score:"
+        ├── #16 -> yier.bubu.jvm.ClassFileTour.history
+        ├── #36 -> List.add(Object)
+        ├── #42 -> Number.intValue()
+        └── #53 -> lambda 调用点
 
-main 方法字节码
-  ├── ldc #3
-  ├── getstatic #2
-  └── invokevirtual #6
+构造方法和 compute 方法字节码
+  ├── ldc #23
+  ├── getfield #16
+  ├── invokevirtual #42
+  ├── invokeinterface #36
+  └── invokedynamic #53
 ```
 
 一句话总结：
@@ -585,13 +692,13 @@ u2 this_class;
 u2 super_class;
 ```
 
-`Demo` 的类信息大致是：
+`ClassFileTour` 的类信息大致是：
 
 ```text
-public class Demo
+public class yier.bubu.jvm.ClassFileTour
   flags: ACC_PUBLIC, ACC_SUPER
-  this_class: #3   // Demo
-  super_class: #4  // java/lang/Object
+  this_class: #2   // yier/bubu/jvm/ClassFileTour
+  super_class: #8  // java/lang/Object
 ```
 
 这三个字段共同回答三个问题：
@@ -605,16 +712,18 @@ super_class  -> 直接父类是谁
 源码中的：
 
 ```java
-public class Demo
+public class ClassFileTour<T extends Number> implements Runnable, Closeable
 ```
 
 在 Class 文件里会明确记录成：
 
-```java
-public class Demo extends Object
+```text
+public class ClassFileTour<T extends Number>
+  extends java.lang.Object
+  implements java.lang.Runnable, java.io.Closeable
 ```
 
-即使源码没有写 `extends Object`，`super_class` 也会指向 `java/lang/Object`。只有 `java/lang/Object` 自己比较特殊，它没有父类，所以它的 `super_class` 为 `0`。
+即使源码没有写 `extends Object`，`super_class` 也会指向 `java/lang/Object`。接口关系不放在 `super_class` 里，而是放在紧随其后的接口表里。只有 `java/lang/Object` 自己比较特殊，它没有父类，所以它的 `super_class` 为 `0`。
 
 类访问标志描述的是“类型级别”的性质。常见标志包括：
 
@@ -629,7 +738,7 @@ public class Demo extends Object
 | `ACC_ANNOTATION` | `0x2000` | 注解类型 |
 | `ACC_ENUM` | `0x4000` | 枚举类型 |
 
-`access_flags` 是按位组合的。例如普通 `public class Demo` 常见值是：
+`access_flags` 是按位组合的。例如普通 `public class ClassFileTour` 常见值是：
 
 ```text
 ACC_PUBLIC | ACC_SUPER = 0x0001 | 0x0020 = 0x0021
@@ -638,10 +747,10 @@ ACC_PUBLIC | ACC_SUPER = 0x0001 | 0x0020 = 0x0021
 不同类型的标志组合不同：
 
 ```text
-public class Demo
+public class Example
   -> ACC_PUBLIC, ACC_SUPER
 
-public final class Demo
+public final class FinalExample
   -> ACC_PUBLIC, ACC_FINAL, ACC_SUPER
 
 public interface Task
@@ -666,9 +775,11 @@ java.util.Map.Entry -> java/util/Map$Entry
 `this_class` 和 `super_class` 都指向 `CONSTANT_Class_info`，而 `CONSTANT_Class_info` 再指向 `CONSTANT_Utf8_info`。因此类信息的完整解析链路通常是：
 
 ```text
-this_class  -> CONSTANT_Class -> CONSTANT_Utf8 -> Demo
+this_class  -> CONSTANT_Class -> CONSTANT_Utf8 -> ClassFileTour
 super_class -> CONSTANT_Class -> CONSTANT_Utf8 -> java/lang/Object
 ```
+
+如果看原始内部名，`this_class` 实际会解析成 `yier/bubu/jvm/ClassFileTour`。`javap` 展示类声明时会把它还原成源码风格的点号包名 `yier.bubu.jvm.ClassFileTour`。
 
 类信息里不会记录完整继承树，只记录直接父类。比如：
 
@@ -695,16 +806,10 @@ u2 interfaces[interfaces_count];
 
 `interfaces_count` 表示接口数量。`interfaces` 数组里的每一项都是一个 `u2` 常量池索引，指向一个 `CONSTANT_Class_info`，再由它找到接口的内部名。
 
-例如源码：
+主示例中的源码：
 
 ```java
-public class Demo implements Runnable, AutoCloseable {
-    public void run() {
-    }
-
-    public void close() {
-    }
-}
+public class ClassFileTour<T extends Number> implements Runnable, Closeable
 ```
 
 接口表可以简化理解为：
@@ -712,14 +817,14 @@ public class Demo implements Runnable, AutoCloseable {
 ```text
 interfaces_count: 2
 interfaces[0]: #x  // java/lang/Runnable
-interfaces[1]: #y  // java/lang/AutoCloseable
+interfaces[1]: #y  // java/io/Closeable
 ```
 
 解析链路和 `this_class` 类似：
 
 ```text
 interfaces[0] -> CONSTANT_Class -> CONSTANT_Utf8 -> java/lang/Runnable
-interfaces[1] -> CONSTANT_Class -> CONSTANT_Utf8 -> java/lang/AutoCloseable
+interfaces[1] -> CONSTANT_Class -> CONSTANT_Utf8 -> java/io/Closeable
 ```
 
 接口表有几个重要边界。
@@ -729,10 +834,10 @@ interfaces[1] -> CONSTANT_Class -> CONSTANT_Utf8 -> java/lang/AutoCloseable
 ```java
 interface A {}
 interface B extends A {}
-class Demo implements B {}
+class Example implements B {}
 ```
 
-`Demo.class` 的接口表只需要记录 `B`。`A` 是 `B.class` 自己的父接口关系，不会被复制到 `Demo.class` 里。
+`Example.class` 的接口表只需要记录 `B`。`A` 是 `B.class` 自己的父接口关系，不会被复制到 `Example.class` 里。
 
 第二，它不记录从父类继承来的接口。例如：
 
@@ -764,15 +869,30 @@ interface Child extends Runnable, AutoCloseable {}
 源码中的字段：
 
 ```java
-private int value = 10;
+public static final int MAGIC = 7;
+private static final String PREFIX = "score:";
+private static int created;
+private @TypeMark("generic-field") T value;
+private final List<String> history = new ArrayList<String>();
 ```
 
 字段表中主要记录字段名、字段类型和访问标志：
 
 ```text
-private int value;
+public static final int MAGIC;
   descriptor: I
+  flags: ACC_PUBLIC, ACC_STATIC, ACC_FINAL
+  ConstantValue: int 7
+
+private T value;
+  descriptor: Ljava/lang/Number;
   flags: ACC_PRIVATE
+  Signature: TT;
+
+private final java.util.List<java.lang.String> history;
+  descriptor: Ljava/util/List;
+  flags: ACC_PRIVATE, ACC_FINAL
+  Signature: Ljava/util/List<Ljava/lang/String;>;
 ```
 
 字段结构可以简化理解为：
@@ -791,17 +911,18 @@ field_info {
 
 - `access_flags` 表示 `private`、`static`、`final`、`volatile`、`transient` 等字段标志。
 - `name_index` 指向常量池中的字段名，例如 `value`。
-- `descriptor_index` 指向常量池中的字段描述符，例如 `I`。
+- `descriptor_index` 指向常量池中的字段描述符，例如 `Ljava/lang/Number;`。
 - `attributes_count` 和 `attributes` 保存字段级属性，例如 `ConstantValue`、`Signature`、注解属性。
 
-对 `private int value` 来说，字段表解析链路可以理解为：
+对 `private T value` 来说，字段表解析链路可以理解为：
 
 ```text
 field_info
   ├── access_flags      -> ACC_PRIVATE
   ├── name_index        -> CONSTANT_Utf8 -> value
-  ├── descriptor_index  -> CONSTANT_Utf8 -> I
-  └── attributes        -> 可能为空，也可能保存 ConstantValue / Signature / 注解
+  ├── descriptor_index  -> CONSTANT_Utf8 -> Ljava/lang/Number;
+  └── attributes        -> Signature / RuntimeVisibleAnnotations /
+                           RuntimeVisibleTypeAnnotations
 ```
 
 常见字段访问标志包括：
@@ -864,12 +985,12 @@ String[]          -> [Ljava/lang/String;
 String[][]        -> [[Ljava/lang/String;
 ```
 
-注意：`value = 10` 这段实例字段初始化逻辑通常不直接放在字段结构里，而是被编译进构造方法的 `Code` 属性中。字段表描述的是字段本身，不描述每次创建对象时如何给字段赋值。
+注意：`history = new ArrayList<String>()` 这段实例字段初始化逻辑通常不直接放在字段结构里，而是被编译进构造方法的 `Code` 属性中。字段表描述的是字段本身，不描述每次创建对象时如何给字段赋值。
 
 这点可以用两类字段区分：
 
 ```java
-private int value = 10;
+private final List<String> history = new ArrayList<String>();
 private static int count = initCount();
 public static final int SIZE = 10;
 ```
@@ -877,9 +998,10 @@ public static final int SIZE = 10;
 它们在 Class 文件中的落点不同：
 
 ```text
-value
-  -> 字段表记录 private int value
-  -> this.value = 10 编译进 <init> 的 Code
+history
+  -> 字段表记录 private final List history
+  -> 泛型 List<String> 记录在 Signature 属性里
+  -> this.history = new ArrayList() 编译进 <init> 的 Code
 
 count
   -> 字段表记录 private static int count
@@ -889,6 +1011,8 @@ SIZE
   -> 字段表记录 public static final int SIZE
   -> 编译期常量值 10 可以放进 ConstantValue 属性
 ```
+
+主示例里的 `MAGIC` 和 `PREFIX` 都是静态 `final` 编译期常量，所以字段表里能看到 `ConstantValue`。而 `created = MAGIC` 来自 `static {}`，它不是字段属性，而是进入 `<clinit>` 的字节码。
 
 `ConstantValue` 是最容易混淆的字段属性：
 
@@ -951,8 +1075,8 @@ method_info {
 ```text
 method_info
   ├── access_flags      -> ACC_PUBLIC
-  ├── name_index        -> CONSTANT_Utf8 -> add
-  ├── descriptor_index  -> CONSTANT_Utf8 -> (I)I
+  ├── name_index        -> CONSTANT_Utf8 -> compute
+  ├── descriptor_index  -> CONSTANT_Utf8 -> (I[Ljava/lang/String;)I
   └── attributes        -> Code / Exceptions / Signature / 注解 ...
 ```
 
@@ -994,6 +1118,7 @@ int add(int x)                -> (I)I
 String join(String s, int n)  -> (Ljava/lang/String;I)Ljava/lang/String;
 void main(String[] args)      -> ([Ljava/lang/String;)V
 int sum(int[] values)         -> ([I)I
+int compute(int, String...)   -> (I[Ljava/lang/String;)I
 ```
 
 方法可以重载，本质上就是同名方法拥有不同描述符：
@@ -1014,46 +1139,59 @@ print:(Ljava/lang/String;)V
 
 ### 8.1 `<init>`：实例构造器
 
-构造方法在 Class 文件中不是名为 `Demo` 的普通方法，而是名为 `<init>` 的特殊方法。虽然源码里没有显式写构造方法，编译器也会生成默认构造方法，并把实例字段初始化放进去：
+构造方法在 Class 文件中不是名为 `ClassFileTour` 的普通方法，而是名为 `<init>` 的特殊方法。主示例中的构造方法：
 
 ```java
-public Demo() {
-    super();
-    this.value = 10;
+public ClassFileTour(T value) {
+    this.value = value;
+    this.history.add(PREFIX + value);
 }
 ```
 
 对应字节码大致是：
 
 ```text
-public Demo();
-  descriptor: ()V
+public ClassFileTour(T);
+  descriptor: (Ljava/lang/Number;)V
   flags: ACC_PUBLIC
   Code:
     0: aload_0
-    1: invokespecial #1  // Method java/lang/Object."<init>":()V
+    1: invokespecial #7   // Method java/lang/Object."<init>":()V
     4: aload_0
-    5: bipush        10
-    7: putfield      #2  // Field value:I
-   10: return
+    5: new           #13  // class java/util/ArrayList
+    8: dup
+    9: invokespecial #15  // Method java/util/ArrayList."<init>":()V
+   12: putfield      #16  // Field history:Ljava/util/List;
+   15: aload_0
+   16: aload_1
+   17: putfield      #1   // Field value:Ljava/lang/Number;
+   20: aload_0
+   21: getfield      #16  // Field history:Ljava/util/List;
+   31: ldc           #23  // String score:
+   43: invokeinterface #36,  2  // InterfaceMethod java/util/List.add:(Ljava/lang/Object;)Z
+   49: return
 ```
 
 逐条看：
 
 - `aload_0`：把局部变量表第 `0` 个槽位里的 `this` 加载到操作数栈。
-- `invokespecial #1`：调用父类构造方法，也就是 `super()`。
-- `bipush 10`：把常量 `10` 压入操作数栈。
-- `putfield #2`：给常量池第 `#2` 项描述的字段赋值，也就是 `this.value`。
+- `invokespecial #7`：调用父类构造方法，也就是 `super()`。
+- `new #13`、`dup`、`invokespecial #15`：创建 `ArrayList` 并调用它的构造方法。
+- `putfield #16`：给 `this.history` 赋值。
+- `putfield #1`：给 `this.value` 赋值。
+- `invokeinterface #36`：调用 `List.add(Object)`。
 - `return`：构造方法返回，构造方法返回类型固定是 `void`。
 
-方法描述符 `()V` 的意思是：
+方法描述符 `(Ljava/lang/Number;)V` 的意思是：
 
 ```text
-()V
-│ │
-│ └── 返回 void
-└──── 没有参数
+(Ljava/lang/Number;)V
+│                  │
+│                  └── 返回 void
+└───────────────────── 一个 Number 参数
 ```
+
+因为 `T extends Number` 会被擦除成 `Number`，所以构造方法的描述符不是 `(TT;)V`。泛型形式会放在方法级 `Signature` 属性中，例如 `(TT;)V`。
 
 如果源码中有多个构造方法，Class 文件中会出现多个名为 `<init>` 的方法，它们通过不同的方法描述符区分。例如：
 
@@ -1092,6 +1230,28 @@ static {
 
 这些逻辑通常都会进入 `<clinit>`。
 
+主示例里有：
+
+```java
+static {
+    created = MAGIC;
+}
+```
+
+对应的 `<clinit>` 很短：
+
+```text
+static {};
+  descriptor: ()V
+  flags: ACC_STATIC
+  Code:
+    0: bipush        7
+    2: putstatic     #99  // Field created:I
+    5: return
+```
+
+`MAGIC` 自己是 `public static final int` 编译期常量，因此字段表中带 `ConstantValue: int 7`。`created` 不是 `final` 编译期常量，赋值逻辑进入了 `<clinit>`。
+
 ### 8.3 编译器生成的方法
 
 方法表中可能出现源码里没有的方法。常见情况包括：
@@ -1111,6 +1271,18 @@ class StringBox implements Comparable<StringBox> {
 ```
 
 编译器可能额外生成一个桥接方法，帮助擦除后的 `Comparable.compareTo(Object)` 转发到 `compareTo(StringBox)`。这种方法通常带有 `ACC_BRIDGE` 和 `ACC_SYNTHETIC`。
+
+主示例里也能看到两类合成方法：
+
+```text
+private int lambda$compute$0(int);
+  flags: ACC_PRIVATE, ACC_SYNTHETIC
+
+static java.lang.Number access$000(yier.bubu.jvm.ClassFileTour);
+  flags: ACC_STATIC, ACC_SYNTHETIC
+```
+
+`lambda$compute$0` 是 lambda 表达式的辅助方法，`invokedynamic` 会通过 `BootstrapMethods` 间接关联到它。`access$000` 是 Java 8 编译器为了让匿名内部类读取外部类私有字段 `value` 而生成的访问辅助方法；较新的 Java 编译策略可能不同，所以学习时要关注“合成方法用于弥补源码语义和字节码访问规则之间的差距”这一点。
 
 ### 8.4 没有 Code 的方法
 
@@ -1132,29 +1304,76 @@ native int size();
 源码中的方法：
 
 ```java
-public int add(int x) {
-    return value + x;
+public int compute(int base, String... tags) throws IOException {
+    int total = base + value.intValue();
+    for (String tag : tags) {
+        total += tag.length();
+    }
+
+    final int snapshot = total;
+    IntSupplier task = () -> snapshot + history.size();
+    Runnable printer = new Runnable() {
+        @Override
+        public void run() {
+            System.out.println(PREFIX + value);
+        }
+    };
+
+    class LocalFormatter {
+        private final int number;
+
+        LocalFormatter(int number) {
+            this.number = number;
+        }
+
+        String format() {
+            return PREFIX + number;
+        }
+    }
+
+    history.add(new LocalFormatter(total).format());
+    printer.run();
+    return task.getAsInt();
 }
 ```
 
 `method_info` 中会记录方法声明：
 
 ```text
-public int add(int);
-  descriptor: (I)I
-  flags: ACC_PUBLIC
+public int compute(int, java.lang.String...) throws java.io.IOException;
+  descriptor: (I[Ljava/lang/String;)I
+  flags: ACC_PUBLIC, ACC_VARARGS
+  Exceptions:
+    throws java.io.IOException
 ```
 
 真正的执行逻辑在它的 `Code` 属性里：
 
 ```text
 Code:
-  stack=2, locals=2
-  0: aload_0
-  1: getfield      #2  // Field value:I
-  4: iload_1
-  5: iadd
-  6: ireturn
+  stack=5, locals=8, args_size=3
+     0: iload_1
+     1: aload_0
+     2: getfield      #1   // Field value:Ljava/lang/Number;
+     5: invokevirtual #42  // Method java/lang/Number.intValue:()I
+     8: iadd
+     9: istore_3
+    21: iload         6
+    23: iload         5
+    25: if_icmpge     49
+    35: iload_3
+    36: aload         7
+    38: invokevirtual #48  // Method java/lang/String.length:()I
+    41: iadd
+    42: istore_3
+    43: iinc          6, 1
+    46: goto          21
+    55: invokedynamic #53,  0
+    62: new           #57  // class yier/bubu/jvm/ClassFileTour$1
+    76: new           #62  // class yier/bubu/jvm/ClassFileTour$1LocalFormatter
+    88: invokeinterface #36,  2  // InterfaceMethod java/util/List.add:(Ljava/lang/Object;)Z
+   103: invokeinterface #75,  1  // InterfaceMethod java/util/function/IntSupplier.getAsInt:()I
+   108: ireturn
 ```
 
 ### 9.1 Code 属性的结构
@@ -1187,46 +1406,72 @@ Code_attribute {
 `code[]` 不是 `javap` 输出里的文本，而是一串字节。每条指令由 1 字节操作码和可能存在的操作数组成。`javap` 把这些字节反汇编成人能读懂的形式，并显示字节码偏移量：
 
 ```text
-0: aload_0
-1: getfield #2
-4: iload_1
-5: iadd
-6: ireturn
+0: iload_1
+1: aload_0
+2: getfield #1
+5: invokevirtual #42
+8: iadd
+9: istore_3
 ```
 
-这里的 `0`、`1`、`4`、`5`、`6` 是字节码偏移量，不是源码行号。`getfield #2` 占用多个字节，所以后一条指令从偏移量 `4` 开始。
+这里的 `0`、`1`、`2`、`5`、`8`、`9` 是字节码偏移量，不是源码行号。`getfield #1` 和 `invokevirtual #42` 都占用多个字节，所以后一条指令不会简单地按 `+1` 递增。
 
 ### 9.2 操作数栈和局部变量表
 
-JVM 字节码大多围绕操作数栈执行。`add` 方法可以按栈变化理解：
+JVM 执行 Java 方法时，会为每一次方法调用创建一个栈帧。栈帧是当前方法的运行时工作区，属于线程私有的 JVM 栈；方法调用时入栈，方法返回或异常退出时出栈。
+
+![线程 JVM 栈和当前栈帧结构](images/jvm-stack-frame-structure.svg)
+
+图示按 JVM 规范层面的执行模型表达。具体到 HotSpot/JIT 时，局部变量和操作数栈的值可能被映射到本地栈槽、CPU 寄存器，甚至因为内联而不再物理创建某个被调用方法的栈帧；但字节码验证、异常处理、调试和去优化仍需要能恢复等价的 JVM 栈帧状态。
+
+`max_locals` 决定这个方法的局部变量表最多需要多少个槽位，`max_stack` 决定操作数栈最多能压入多深。它们都写在方法的 `Code` 属性中。运行时的 `istore`、`astore` 这类指令不是把值写回 `.class` 文件，而是把当前栈帧里操作数栈顶的值弹出，保存到当前栈帧的局部变量表槽位中。
 
 ```text
+iload / aload / fload ...
+  -> 局部变量表槽位中的值复制到操作数栈
+
+istore / astore / fstore ...
+  -> 操作数栈顶的值弹出，保存到局部变量表槽位
+```
+
+JVM 字节码大多围绕操作数栈执行。`compute` 方法开头的 `base + value.intValue()` 可以按栈变化理解：
+
+```text
+iload_1
+  -> 把局部变量槽位 1 的 int 参数 base 压栈
+
 aload_0
   -> 把 this 压栈
 
-getfield #2
-  -> 弹出 this，读取 value，把 int 值压栈
+getfield #1
+  -> 弹出 this，读取 value，把 Number 引用压栈
 
-iload_1
-  -> 把局部变量槽位 1 的 int 参数 x 压栈
+invokevirtual #42
+  -> 调用 Number.intValue()，弹出 Number 引用，压入 int 返回值
 
 iadd
   -> 弹出两个 int，相加，把结果压栈
 
-ireturn
-  -> 弹出 int 作为返回值
+istore_3
+  -> 把 int 结果保存到局部变量槽位 3，也就是 total
 ```
 
-对实例方法 `add(int x)` 来说，局部变量表的槽位是：
+如果调用时 `base = 10`，并且 `value.intValue()` 返回 `7`，这一小段执行过程可以简化成：
+
+![局部变量表和操作数栈变化过程](images/operand-stack-local-variables-flow.svg)
+
+对实例方法 `compute(int base, String... tags)` 来说，局部变量表开头的槽位是：
 
 ```text
 slot 0 -> this
-slot 1 -> x
+slot 1 -> base
+slot 2 -> tags
+slot 3 -> total
 ```
 
-所以字节码使用 `aload_0` 读取 `this`，使用 `iload_1` 读取参数 `x`。如果是静态方法，就没有隐式的 `this`，第一个参数会从 `slot 0` 开始。
+所以字节码使用 `aload_0` 读取 `this`，使用 `iload_1` 读取参数 `base`，使用 `aload_2` 读取 `tags`。如果是静态方法，就没有隐式的 `this`，第一个参数会从 `slot 0` 开始。
 
-`max_stack=2` 是因为这个方法执行到 `iadd` 前，操作数栈最多同时放两个 `int`。`max_locals=2` 是因为它只需要 `this` 和参数 `x` 两个槽位。
+`compute` 的 `max_stack=5`、`max_locals=8` 比简单加法大得多，是因为它包含循环、lambda、匿名内部类、局部类对象创建和多个局部变量。`javap` 里的 `LocalVariableTable` 能看到局部变量名、作用范围和槽位，例如 `total`、`snapshot`、`task`、`printer`。
 
 还要注意 `long` 和 `double` 会占两个局部变量槽位。例如实例方法：
 
@@ -1245,7 +1490,7 @@ slot 3 -> b
 
 ### 9.3 异常表
 
-`Code` 结构里的异常表描述异常处理范围。它的每一项通常包括：
+`Code` 结构里的异常表描述异常处理范围。它和方法声明上的 `throws IOException` 不是一回事：`throws` 会进入方法级 `Exceptions` 属性，而 `try-catch-finally` 才会在 `Code` 内部产生异常表。异常表的每一项通常包括：
 
 ```text
 exception_table {
@@ -1273,6 +1518,15 @@ try {
 对应的 `Code` 中会有一段异常表，JVM 根据这张表决定抛出异常后跳到哪里。
 
 异常表和 Java 源码的 `try-catch` 不是一一按文本保存的关系。编译器会把源码控制流编译成字节码范围和处理入口，JVM 运行时只看字节码偏移量和异常类型。
+
+主示例的 `compute` 声明了 `throws IOException`，所以方法级属性中能看到：
+
+```text
+Exceptions:
+  throws java.io.IOException
+```
+
+但 `compute` 方法体里没有 `try-catch`，所以它的 `Code` 异常表可以为空。这个区别很重要：`Exceptions` 属性描述方法签名上的受检异常声明；`Code.exception_table` 描述运行时异常处理跳转。
 
 ### 9.4 Code 内部的调试和校验属性
 
@@ -1390,10 +1644,10 @@ attribute_info {
 例如：
 
 ```text
-SourceFile: "Demo.java"
+SourceFile: "ClassFileTour.java"
 LineNumberTable:
-  line 2: 0
-  line 5: 0
+  line 32: 0
+  line 33: 10
 ```
 
 这些信息通常不是程序执行逻辑本身，但对调试、反射、注解处理和工具分析很重要。
@@ -1429,7 +1683,7 @@ Code.attributes
 
 下面把几个常见属性展开说清楚。
 
-`SourceFile` 只保存一个源文件名索引，例如 `Demo.java`。它不是源码本身，只是让堆栈、调试器和工具知道这个类来源于哪个文件：
+`SourceFile` 只保存一个源文件名索引，例如 `ClassFileTour.java`。它不是源码本身，只是让堆栈、调试器和工具知道这个类来源于哪个文件：
 
 ```text
 SourceFile_attribute {
@@ -1437,6 +1691,12 @@ SourceFile_attribute {
     u4 attribute_length;   // 固定为 2
     u2 sourcefile_index;   // 指向 CONSTANT_Utf8
 }
+```
+
+主示例中可以看到：
+
+```text
+SourceFile: "ClassFileTour.java"
 ```
 
 `ConstantValue` 只会出现在静态 `final` 字段上，用来保存编译期常量值：
@@ -1452,10 +1712,11 @@ ConstantValue_attribute {
 例如：
 
 ```java
-public static final int SIZE = 10;
+public static final int MAGIC = 7;
+private static final String PREFIX = "score:";
 ```
 
-编译后可以直接把 `10` 放在 `ConstantValue` 里，这样类初始化时就不需要再执行字节码去赋值。
+编译后可以直接把 `7` 和 `"score:"` 放在 `ConstantValue` 里，这样类初始化时就不需要再执行字节码去给这两个字段赋值。
 
 `Exceptions` 记录方法声明会抛出的受检异常列表：
 
@@ -1471,7 +1732,7 @@ Exceptions_attribute {
 `exception_index_table` 里的每一项都指向一个 `CONSTANT_Class`，也就是异常类型。例如：
 
 ```java
-public void read() throws IOException
+public int compute(int base, String... tags) throws IOException
 ```
 
 它会把 `IOException` 的类引用写进属性里，供反射和工具查看。
@@ -1487,6 +1748,17 @@ Signature_attribute {
 ```
 
 原因是字段描述符和方法描述符只能表达擦除后的运行时类型，比如 `List<String>` 运行时仍然可能表现为 `List`。`Signature` 才保留泛型参数信息。
+
+主示例里有多个 `Signature`：
+
+```text
+Signature: <T:Ljava/lang/Number;>Ljava/lang/Object;Ljava/lang/Runnable;Ljava/io/Closeable;
+Signature: TT;
+Signature: Ljava/util/List<Ljava/lang/String;>;
+Signature: (I)Lyier/bubu/jvm/ClassFileTour<Ljava/lang/Integer;>;
+```
+
+这些签名分别用于类、字段和方法。没有它们，描述符只能看到擦除后的 `Number`、`List`、`ClassFileTour`。
 
 `InnerClasses` 记录内部类、成员类、局部类、匿名类之间的关系：
 
@@ -1515,6 +1787,24 @@ EnclosingMethod_attribute {
     u2 class_index;         // 外部类
     u2 method_index;        // 外部方法或构造方法，没有则为 0
 }
+```
+
+如果继续查看主示例生成的内部类文件，可以看到匿名内部类和局部类都有 `EnclosingMethod`：
+
+```text
+ClassFileTour$1.class
+  EnclosingMethod: ClassFileTour.compute
+
+ClassFileTour$1LocalFormatter.class
+  EnclosingMethod: ClassFileTour.compute
+```
+
+`ClassFileTour.class` 自身则通过 `InnerClasses` 记录这些内部类的存在：
+
+```text
+InnerClasses:
+  #57;                 // class yier/bubu/jvm/ClassFileTour$1
+  LocalFormatter=...   // class yier/bubu/jvm/ClassFileTour$1LocalFormatter
 ```
 
 `BootstrapMethods` 是动态调用的关键。它保存 `invokedynamic`、lambda 表达式、方法句柄相关的引导方法信息：
@@ -1546,9 +1836,43 @@ invokedynamic 指令
 
 比如 Java 8 的 lambda 编译后，常常会出现一个 `invokedynamic` 指令。执行时 JVM 通过 `BootstrapMethods` 找到引导方法，引导方法返回一个调用点，之后该调用点就可以像普通方法调用一样被执行和优化。
 
+主示例的 lambda：
+
+```java
+IntSupplier task = () -> snapshot + history.size();
+```
+
+会在 `compute` 方法里出现：
+
+```text
+invokedynamic #53,  0
+```
+
+类级属性里同时出现：
+
+```text
+BootstrapMethods:
+  0: REF_invokeStatic java/lang/invoke/LambdaMetafactory.metafactory
+    Method arguments:
+      ()I
+      REF_invokeSpecial yier/bubu/jvm/ClassFileTour.lambda$compute$0:(I)I
+      ()I
+```
+
+这说明 lambda 的调用点和 `lambda$compute$0` 辅助方法不是靠普通 `invokevirtual` 直接绑定，而是由 `invokedynamic` 加 `BootstrapMethods` 共同描述。
+
 `RuntimeVisibleAnnotations` 和 `RuntimeInvisibleAnnotations` 分别保存运行时可见和不可见的注解。前者会被反射 API 看到，后者通常只供编译器或工具使用。
 
 `RuntimeVisibleTypeAnnotations` 和 `RuntimeInvisibleTypeAnnotations` 是更细一层的类型注解属性。它们描述的是“类型使用位置上的注解”，例如泛型参数、强转、`throws`、`instanceof` 等位置上的注解。
+
+主示例中的：
+
+```java
+@RuntimeMark("field")
+private @TypeMark("generic-field") T value;
+```
+
+会让字段同时带有普通注解属性和类型注解属性。普通注解标在字段声明上；类型注解标在字段类型使用位置上，所以 `javap -v -p` 会同时显示 `RuntimeVisibleAnnotations` 和 `RuntimeVisibleTypeAnnotations`。
 
 ---
 
@@ -1584,21 +1908,27 @@ Class 文件只是磁盘或网络中的静态二进制格式。JVM 真正使用�
 
 如果只看 `javap -v`，很容易把 Class 文件理解成“很多名字的集合”。更准确的理解方式是：它首先是一串字节，JVM 或工具按固定顺序逐字段读取。
 
-下面用一个极简片段说明读取思路。假设一个 Class 文件开头字节如下：
+下面用 `ClassFileTour.class` 的文件头片段说明读取思路。它开头的字节类似：
 
 ```text
-CA FE BA BE 00 00 00 34 00 0F 07 00 02 01 00 04 44 65 6D 6F ...
+CA FE BA BE 00 00 00 34 00 AE 09 00 02 00 03 07
+00 04 0C 00 05 00 06 01 00 1B 79 69 65 72 2F 62 ...
 ```
 
 按 Class 文件顺序可以这样拆：
 
 ```text
-CA FE BA BE          -> magic = 0xCAFEBABE
-00 00                -> minor_version = 0
-00 34                -> major_version = 52
-00 0F                -> constant_pool_count = 15
-07 00 02             -> #1 = CONSTANT_Class, name_index = 2
-01 00 04 44 65 6D 6F -> #2 = CONSTANT_Utf8, length = 4, bytes = "Demo"
+CA FE BA BE                      -> magic = 0xCAFEBABE
+00 00                            -> minor_version = 0
+00 34                            -> major_version = 52
+00 AE                            -> constant_pool_count = 174
+09 00 02 00 03                   -> #1 = CONSTANT_Fieldref
+                                     class_index = 2, name_and_type_index = 3
+07 00 04                         -> #2 = CONSTANT_Class, name_index = 4
+0C 00 05 00 06                   -> #3 = CONSTANT_NameAndType
+                                     name_index = 5, descriptor_index = 6
+01 00 1B 79 69 65 72 2F 62 ...   -> #4 = CONSTANT_Utf8, length = 27,
+                                     bytes = "yier/bubu/jvm/ClassFileTour"
 ```
 
 这说明：
@@ -1606,8 +1936,10 @@ CA FE BA BE          -> magic = 0xCAFEBABE
 - 前 4 字节先确认文件类型。
 - 接着读版本号。
 - 然后读常量池容量。
-- 常量池第一个条目 `#1` 是 `CONSTANT_Class`，它自己不保存类名，只引用 `#2`。
-- `#2` 是 `CONSTANT_Utf8`，才保存真实字符串 `Demo`。
+- 常量池第一个条目 `#1` 是 `CONSTANT_Fieldref`，表示 `yier/bubu/jvm/ClassFileTour.value:Ljava/lang/Number;`。
+- `#1` 自己不保存字段名和字段类型，它引用 `#2` 和 `#3`。
+- `#2` 是 `CONSTANT_Class`，再引用 `#4`。
+- `#4` 是 `CONSTANT_Utf8`，才保存真实内部名字符串 `yier/bubu/jvm/ClassFileTour`。
 
 如果继续向后读，就会遇到 `access_flags`、`this_class`、`super_class`、接口表、字段表、方法表和属性表。每一段都必须按照前面字段给出的数量来解释，不能靠“猜”。
 
@@ -1634,17 +1966,27 @@ CA FE BA BE          -> magic = 0xCAFEBABE
 - **属性表**：承载调试信息、泛型、注解、异常、内部类、动态调用等扩展信息。
 - **逐字节解析**：所有结构最终都要落回具体字节、字段长度和常量池索引。
 
-对于 `Demo` 这个例子，Class 文件最终记录了：
+对于 `ClassFileTour` 这个例子，Class 文件最终记录了：
 
 ```text
-Demo extends Object
-private int value
-public Demo()
-public int add(int)
-构造方法里执行 this.value = 10
-add 方法里执行 return this.value + x
-SourceFile 指向 Demo.java
-LineNumberTable 记录源码行号和字节码偏移量的关系
+ClassFileTour<T extends Number> extends Object
+implements Runnable, Closeable
+public static final int MAGIC = 7
+private static final String PREFIX = "score:"
+private static int created
+private T value
+private final List<String> history
+public ClassFileTour(T)
+public int compute(int, String...) throws IOException
+public int guardedLength(String)
+public static ClassFileTour<Integer> of(int)
+public void run()
+public void close() throws IOException
+<clinit> 执行 created = MAGIC
+lambda 通过 invokedynamic 和 BootstrapMethods 描述
+匿名内部类和局部类通过额外 .class 文件、InnerClasses、EnclosingMethod 描述
+SourceFile 指向 ClassFileTour.java
+LineNumberTable / LocalVariableTable / StackMapTable 记录调试和校验信息
 ```
 
 源码中的类、字段和方法，最终都会被拆成这些结构化的二进制数据。JVM 先按固定格式解析这些数据，再通过常量池和属性表把符号、字节码、调试信息等内容组织成运行时可用的类元数据。

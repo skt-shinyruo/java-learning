@@ -1,0 +1,188 @@
+<svg class="doc-diagram" viewBox="0 0 1280 760" role="img" aria-label="JVM 规范模型中的线程上下文、JVM 栈、当前栈帧、运行时常量池和堆引用关系" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .doc-diagram {
+      --dg-surface: #f8fafc;
+      --dg-panel: #ffffff;
+      --dg-border: #cbd5e1;
+      --dg-text: #172033;
+      --dg-muted: #334155;
+      --dg-accent: #0369a1;
+      --dg-blue: #eff6ff;
+      --dg-blue-border: #93c5fd;
+      --dg-green: #ecfdf5;
+      --dg-green-border: #86efac;
+      --dg-orange: #fff7ed;
+      --dg-orange-border: #fdba74;
+      --dg-purple: #f5f3ff;
+      --dg-purple-border: #c4b5fd;
+      --dg-yellow: #fefce8;
+      --dg-yellow-border: #fde047;
+      color: var(--dg-muted);
+    }
+    @media (prefers-color-scheme: dark) {
+      .doc-diagram {
+        --dg-surface: #0f172a;
+        --dg-panel: #111827;
+        --dg-border: #475569;
+        --dg-text: #e5e7eb;
+        --dg-muted: #cbd5e1;
+        --dg-accent: #38bdf8;
+        --dg-blue: #172554;
+        --dg-blue-border: #2563eb;
+        --dg-green: #052e2b;
+        --dg-green-border: #0f766e;
+        --dg-orange: #431407;
+        --dg-orange-border: #c2410c;
+        --dg-purple: #2e1065;
+        --dg-purple-border: #7e22ce;
+        --dg-yellow: #422006;
+        --dg-yellow-border: #ca8a04;
+      }
+    }
+    .dg-surface { fill: var(--dg-surface); stroke: var(--dg-border); stroke-width: 1.4; }
+    .dg-panel { fill: var(--dg-panel); stroke: var(--dg-border); stroke-width: 1.4; }
+    .dg-blue { fill: var(--dg-blue); stroke: var(--dg-blue-border); stroke-width: 1.4; }
+    .dg-green { fill: var(--dg-green); stroke: var(--dg-green-border); stroke-width: 1.8; }
+    .dg-orange { fill: var(--dg-orange); stroke: var(--dg-orange-border); stroke-width: 1.4; }
+    .dg-purple { fill: var(--dg-purple); stroke: var(--dg-purple-border); stroke-width: 1.4; }
+    .dg-yellow { fill: var(--dg-yellow); stroke: var(--dg-yellow-border); stroke-width: 1.4; }
+    .dg-slot { fill: var(--dg-panel); stroke: var(--dg-border); stroke-width: 1; }
+    .dg-stack-cell { fill: var(--dg-purple); stroke: var(--dg-purple-border); stroke-width: 1; }
+    .dg-empty { fill: transparent; stroke: var(--dg-border); stroke-width: 1; stroke-dasharray: 5 4; }
+    .dg-badge { fill: var(--dg-accent); }
+    .dg-title { font: 700 25px sans-serif; fill: var(--dg-text); }
+    .dg-section-title { font: 700 16px sans-serif; fill: var(--dg-text); }
+    .dg-label { font: 13px sans-serif; fill: var(--dg-muted); }
+    .dg-small { font: 12px sans-serif; fill: var(--dg-muted); }
+    .dg-code { font: 12px monospace; fill: var(--dg-muted); }
+    .dg-code-strong { font: 700 12px monospace; fill: var(--dg-text); }
+    .dg-badge-text { font: 700 11px sans-serif; fill: #ffffff; }
+    .dg-arrow { stroke: var(--dg-accent); stroke-width: 1.8; fill: none; marker-end: url(#arrow); }
+    .dg-marker { fill: var(--dg-accent); }
+  </style>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path class="dg-marker" d="M0,0 L0,6 L9,3 z"/>
+    </marker>
+  </defs>
+
+  <rect x="20" y="20" width="1240" height="720" rx="14" class="dg-surface"/>
+  <text x="640" y="58" text-anchor="middle" class="dg-title">JVM 栈帧：规范概念模型</text>
+
+  <rect x="50" y="90" width="280" height="125" rx="12" class="dg-blue"/>
+  <text x="190" y="120" text-anchor="middle" class="dg-section-title">线程上下文</text>
+  <rect x="78" y="142" width="224" height="42" rx="8" class="dg-panel"/>
+  <text x="94" y="168" class="dg-label">PC Register</text>
+  <text x="288" y="168" text-anchor="end" class="dg-code">offset 5</text>
+  <text x="78" y="202" class="dg-small">PC 指向当前线程下一条或当前字节码位置</text>
+
+  <rect x="50" y="245" width="280" height="405" rx="12" class="dg-panel"/>
+  <text x="190" y="276" text-anchor="middle" class="dg-section-title">Java 虚拟机栈</text>
+  <text x="190" y="298" text-anchor="middle" class="dg-small">线程私有；栈顶帧才是当前帧</text>
+
+  <rect x="78" y="325" width="224" height="86" rx="9" class="dg-green"/>
+  <text x="190" y="352" text-anchor="middle" class="dg-section-title">compute 当前栈帧</text>
+  <text x="190" y="375" text-anchor="middle" class="dg-code">current frame</text>
+  <text x="190" y="396" text-anchor="middle" class="dg-small">解释器只操作这个栈帧</text>
+
+  <rect x="78" y="440" width="224" height="66" rx="9" class="dg-blue"/>
+  <text x="190" y="468" text-anchor="middle" class="dg-label">调用者栈帧</text>
+  <text x="190" y="489" text-anchor="middle" class="dg-code">return target</text>
+
+  <rect x="78" y="530" width="224" height="66" rx="9" class="dg-blue"/>
+  <text x="190" y="568" text-anchor="middle" class="dg-label">更早的调用栈帧</text>
+
+  <path d="M330 368 C365 368, 375 368, 410 368" class="dg-arrow"/>
+
+  <rect x="410" y="90" width="535" height="540" rx="12" class="dg-green"/>
+  <text x="678" y="120" text-anchor="middle" class="dg-section-title">当前栈帧：ClassFileTour.compute</text>
+  <text x="678" y="143" text-anchor="middle" class="dg-code">descriptor: (int, String[]) -&gt; int   Code: max_locals=8, max_stack=5</text>
+
+  <rect x="438" y="165" width="478" height="150" rx="10" class="dg-panel"/>
+  <text x="458" y="193" class="dg-section-title">局部变量表 Local Variables</text>
+  <text x="764" y="188" class="dg-small">槽位保存值或引用</text>
+  <text x="764" y="206" class="dg-small">不保存对象本体</text>
+
+  <rect x="458" y="214" width="88" height="48" rx="6" class="dg-slot"/>
+  <circle cx="468" cy="224" r="10" class="dg-badge"/><text x="468" y="228" text-anchor="middle" class="dg-badge-text">1</text>
+  <text x="502" y="235" text-anchor="middle" class="dg-code-strong">slot0</text>
+  <text x="502" y="253" text-anchor="middle" class="dg-code">ref this</text>
+  <rect x="554" y="214" width="88" height="48" rx="6" class="dg-slot"/>
+  <text x="598" y="235" text-anchor="middle" class="dg-code-strong">slot1</text>
+  <text x="598" y="253" text-anchor="middle" class="dg-code">int 10</text>
+  <rect x="650" y="214" width="94" height="48" rx="6" class="dg-slot"/>
+  <circle cx="660" cy="224" r="10" class="dg-badge"/><text x="660" y="228" text-anchor="middle" class="dg-badge-text">2</text>
+  <text x="697" y="235" text-anchor="middle" class="dg-code-strong">slot2</text>
+  <text x="697" y="253" text-anchor="middle" class="dg-code">ref tags</text>
+  <rect x="752" y="214" width="88" height="48" rx="6" class="dg-slot"/>
+  <text x="796" y="235" text-anchor="middle" class="dg-code-strong">slot3</text>
+  <text x="796" y="253" text-anchor="middle" class="dg-code">int total</text>
+
+  <rect x="458" y="272" width="88" height="26" rx="5" class="dg-empty"/>
+  <text x="502" y="290" text-anchor="middle" class="dg-code">slot4</text>
+  <rect x="554" y="272" width="88" height="26" rx="5" class="dg-empty"/>
+  <text x="598" y="290" text-anchor="middle" class="dg-code">slot5</text>
+  <rect x="650" y="272" width="94" height="26" rx="5" class="dg-empty"/>
+  <text x="697" y="290" text-anchor="middle" class="dg-code">slot6</text>
+  <rect x="752" y="272" width="88" height="26" rx="5" class="dg-empty"/>
+  <text x="796" y="290" text-anchor="middle" class="dg-code">slot7</text>
+  <text x="852" y="286" class="dg-small">临时变量</text>
+
+  <rect x="438" y="335" width="478" height="155" rx="10" class="dg-panel"/>
+  <text x="458" y="363" class="dg-section-title">操作数栈 Operand Stack</text>
+  <text x="815" y="363" class="dg-small">栈顶在右侧</text>
+  <rect x="458" y="392" width="74" height="44" rx="6" class="dg-stack-cell"/>
+  <text x="495" y="411" text-anchor="middle" class="dg-code-strong">bottom</text>
+  <text x="495" y="429" text-anchor="middle" class="dg-code">int 10</text>
+  <rect x="540" y="392" width="104" height="44" rx="6" class="dg-stack-cell"/>
+  <circle cx="550" cy="402" r="10" class="dg-badge"/><text x="550" y="406" text-anchor="middle" class="dg-badge-text">3</text>
+  <text x="592" y="411" text-anchor="middle" class="dg-code-strong">top</text>
+  <text x="592" y="429" text-anchor="middle" class="dg-code">ref Number</text>
+  <rect x="652" y="392" width="74" height="44" rx="6" class="dg-empty"/>
+  <text x="689" y="419" text-anchor="middle" class="dg-code">空</text>
+  <rect x="734" y="392" width="74" height="44" rx="6" class="dg-empty"/>
+  <text x="771" y="419" text-anchor="middle" class="dg-code">空</text>
+  <rect x="816" y="392" width="74" height="44" rx="6" class="dg-empty"/>
+  <text x="853" y="419" text-anchor="middle" class="dg-code">空</text>
+  <path d="M594 384 L594 370" class="dg-arrow"/>
+  <text x="614" y="381" class="dg-small">栈顶</text>
+  <text x="458" y="466" class="dg-small">示例状态：执行 invokevirtual #42 前，栈中已有 base 和 value 引用</text>
+
+  <rect x="438" y="502" width="228" height="106" rx="10" class="dg-orange"/>
+  <text x="458" y="530" class="dg-section-title">动态链接</text>
+  <circle cx="648" cy="520" r="10" class="dg-badge"/><text x="648" y="524" text-anchor="middle" class="dg-badge-text">4</text>
+  <text x="458" y="554" class="dg-code">frame -&gt; runtime CP</text>
+  <text x="458" y="576" class="dg-code">#1 Fieldref value</text>
+  <text x="458" y="598" class="dg-code">#42 Methodref intValue</text>
+
+  <rect x="688" y="502" width="228" height="106" rx="10" class="dg-yellow"/>
+  <text x="708" y="530" class="dg-section-title">方法返回信息</text>
+  <text x="708" y="554" class="dg-code">normal: ireturn</text>
+  <text x="708" y="576" class="dg-code">abrupt: exception</text>
+  <text x="708" y="598" class="dg-code">return pc -&gt; caller</text>
+
+  <rect x="985" y="90" width="245" height="205" rx="12" class="dg-orange"/>
+  <text x="1108" y="120" text-anchor="middle" class="dg-section-title">运行时常量池</text>
+  <text x="1008" y="150" class="dg-code">ClassFileTour</text>
+  <text x="1008" y="176" class="dg-code">#1  value:Number</text>
+  <text x="1008" y="202" class="dg-code">#42 Number.intValue</text>
+  <text x="1008" y="228" class="dg-code">#53 invokedynamic</text>
+  <text x="1008" y="256" class="dg-small">索引用于解析字段、方法</text>
+  <text x="1008" y="276" class="dg-small">以及动态调用点</text>
+
+  <rect x="985" y="335" width="245" height="315" rx="12" class="dg-purple"/>
+  <text x="1108" y="365" text-anchor="middle" class="dg-section-title">Java 堆中的对象</text>
+  <rect x="1010" y="392" width="195" height="58" rx="8" class="dg-panel"/>
+  <text x="1108" y="417" text-anchor="middle" class="dg-code-strong">ClassFileTour object</text>
+  <text x="1108" y="438" text-anchor="middle" class="dg-code">field value -&gt; Number</text>
+  <rect x="1010" y="468" width="195" height="58" rx="8" class="dg-panel"/>
+  <text x="1108" y="493" text-anchor="middle" class="dg-code-strong">Number object</text>
+  <text x="1108" y="514" text-anchor="middle" class="dg-code">intValue() returns 7</text>
+  <rect x="1010" y="544" width="195" height="58" rx="8" class="dg-panel"/>
+  <text x="1108" y="569" text-anchor="middle" class="dg-code-strong">String[] tags</text>
+  <text x="1108" y="590" text-anchor="middle" class="dg-code">slot2 holds reference</text>
+
+  <rect x="50" y="660" width="1180" height="58" rx="10" class="dg-panel"/>
+  <text x="72" y="686" class="dg-small">编号关系：① slot0 保存 this 引用，对应 ClassFileTour object；② slot2 保存 tags 引用，对应 String[]；</text>
+  <text x="72" y="708" class="dg-small">③ 操作数栈顶保存 Number 引用；④ 动态链接通过运行时常量池解析字段和方法符号引用。</text>
+</svg>
