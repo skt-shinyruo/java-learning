@@ -2,12 +2,6 @@
 
 这里保留的是按章节拆分后的 Markdown 文档。
 
-如需重新从 PDF 生成章节，请在仓库根目录执行：
-
-```bash
-python3 scripts/pdf/generate_jvm_book_chapters.py
-```
-
 ## 文件列表
 
 - [前言](./00-前言.md)

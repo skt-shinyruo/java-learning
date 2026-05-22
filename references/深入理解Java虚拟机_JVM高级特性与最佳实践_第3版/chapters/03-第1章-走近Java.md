@@ -20,31 +20,25 @@ Java能获得如此广泛的认可，除了它拥有一门结构严谨、面向�
 
 从广义上讲，Kotlin、Clojure、JRuby、Groovy等运行于Java虚拟机上的编程语言及其相关的程序都属于Java技术体系中的一员。如果仅从传统意义上来看，JCP官方[1]所定义的Java技术体系包括了以下几个组成部分：
 
-·Java程序设计语言
-
-·各种硬件平台上的Java虚拟机实现
-
-·Class文件格式
-
-·Java类库API
-
-·来自商业机构和开源社区的第三方Java类库
+- Java程序设计语言
+- 各种硬件平台上的Java虚拟机实现
+- Class文件格式
+- Java类库API
+- 来自商业机构和开源社区的第三方Java类库
 
 我们可以把Java程序设计语言、Java虚拟机、Java类库这三部分统称为JDK（Java Development Kit），JDK是用于支持Java程序开发的最小环境，本书中为行文方便，在不产生歧义的地方常以JDK来代指整个Java技术体系[2]。可以把Java类库API中的Java SE API子集[3]和Java虚拟机这两部分统称为JRE（Java Runtime Environment），JRE是支持Java程序运行的标准环境。图1-2展示了Java技术体系所包括的内容，以及JDK和JRE所涵盖的范围。
 
 以上是根据Java各个组成部分的功能来进行划分，如果按照技术所服务的领域来划分，或者按照技术关注的重点业务来划分的话，那Java技术体系可以分为以下四条主要的产品线：
 
-·Java Card：支持Java小程序（Applets）运行在小内存设备（如智能卡）上的平台。
+- Java Card：支持Java小程序（Applets）运行在小内存设备（如智能卡）上的平台。
 
 ![第23页图片1](../images/page-0023-image-01.jpeg)
 
 图1-2　Java技术体系所包括的内容
 
-·Java ME（Micro Edition）：支持Java程序运行在移动终端（手机、PDA）上的平台，对Java API有所精简，并加入了移动终端的针对性支持，这条产品线在JDK 6以前被称为J2ME。有一点读者请勿混淆，现在在智能手机上非常流行的、主要使用Java语言开发程序的Android并不属于Java ME。
-
-·Java SE（Standard Edition）：支持面向桌面级应用（如Windows下的应用程序）的Java平台，提供了完整的Java核心API，这条产品线在JDK 6以前被称为J2SE。
-
-·Java EE（Enterprise Edition）：支持使用多层架构的企业应用（如ERP、MIS、CRM应用）的
+- Java ME（Micro Edition）：支持Java程序运行在移动终端（手机、PDA）上的平台，对Java API有所精简，并加入了移动终端的针对性支持，这条产品线在JDK 6以前被称为J2ME。有一点读者请勿混淆，现在在智能手机上非常流行的、主要使用Java语言开发程序的Android并不属于Java ME。
+- Java SE（Standard Edition）：支持面向桌面级应用（如Windows下的应用程序）的Java平台，提供了完整的Java核心API，这条产品线在JDK 6以前被称为J2SE。
+- Java EE（Enterprise Edition）：支持使用多层架构的企业应用（如ERP、MIS、CRM应用）的
 
 Java平台，除了提供Java SE API外，还对其做了大量有针对性的扩充[4]，并提供了相关的部署支持，这条产品线在JDK 6以前被称为J2EE，在JDK 10以后被Oracle放弃，捐献给Eclipse基金会管理，此后被称为Jakarta EE。
 
@@ -94,15 +88,11 @@ JDK 6发布以后，由于代码复杂性的增加、Java开源、开发JavaFX�
 
 从JDK 7最原始的功能清单来看，它本应是一个包含许多重要改进的JDK版本，其中规划的子项目都为Java业界翘首以盼，包括：
 
-·Lambda项目：支持Lambda表达式，支持函数式编程。
-
-·Jigsaw项目：虚拟机层面的模块化支持。
-
-·动态语言支持：Java是静态语言，为其他运行在Java虚拟机上的动态语言提供支持。
-
-·Garbage-First收集器。
-
-·Coin项目：Java语法细节进化。
+- Lambda项目：支持Lambda表达式，支持函数式编程。
+- Jigsaw项目：虚拟机层面的模块化支持。
+- 动态语言支持：Java是静态语言，为其他运行在Java虚拟机上的动态语言提供支持。
+- Garbage-First收集器。
+- Coin项目：Java语法细节进化。
 
 令人惋惜的是，在JDK 7开发期间，Sun公司相继在技术竞争和商业竞争中陷入泥潭，公司的股票市值跌至仅有高峰时期的3%，已无力推动JDK 7的研发工作按计划继续进行。为了尽快结束JDK 7长期跳票的问题，Oracle收购Sun公司后随即宣布马上实行“B计划”，大幅裁剪了JDK 7预定目标，以保证JDK 7的正式版能够于2011年7月28日准时发布。“B计划”的主要措施是把不能按时完成的Lambda项目、Jigsaw项目和Coin项目的部分改进延迟到JDK 8之中。最终，JDK 7包含的改进有：提供新的G1收集器（G1在发布时依然处于Experimental状态，直至2012年4月的Update 4中才正式商用）、加强对非Java语言的调用支持（JSR-292，这项特性在到JDK 11还有改动）、可并行的类加载架构等。
 
@@ -114,15 +104,11 @@ Oracle公司接手了JDK开发工作以后，迅速展现出了完全不同于Su
 
 JDK 8的第一个正式版本原定于2013年9月发布，最终还是跳票到了2014年3月18日，尽管仍然是没有赶上正点，但比起JDK 7那种以年作为计时单位、直接把公司跳崩的研发状况已是大有改善。为了保证日后JDK研发能更顺利地进行，从JDK 8开始，Oracle启用JEP（JDK Enhancement Proposals）来定义和管理纳入新版JDK发布范围的功能特性。JDK 8提供了那些曾在JDK 7中规划过，但最终未能在JDK 7中完成的功能，主要包括：
 
-·JEP 126：对Lambda表达式的支持，这让Java语言拥有了流畅的函数式表达能力。
-
-·JEP 104：内置Nashorn JavaScript引擎的支持。
-
-·JEP 150：新的时间、日期API。
-
-·JEP 122：彻底移除HotSpot的永久代。
-
-·……
+- JEP 126：对Lambda表达式的支持，这让Java语言拥有了流畅的函数式表达能力。
+- JEP 104：内置Nashorn JavaScript引擎的支持。
+- JEP 150：新的时间、日期API。
+- JEP 122：彻底移除HotSpot的永久代。
+- ……
 
 “B计划”中原本说好的会在JDK 8提供的Jigsaw模块化功能再次被延期到了JDK 9，不得不说，即使放到整个Java发展史里看，Jigsaw都能算是天字第一号的大坑。Java的模块化系统本身面临的技术挑战就很艰巨，从微软的DLL技术开始，到Java自己的JAR，再到.NET的Assembly，工程庞大起来都无一例外会陷入“模块地狱”[7]的困境之中，而Jigsaw面临的更大困难是厂商之间以标准话语权为目的，以技术为“找茬”手段的激烈竞争。
 
@@ -257,51 +243,44 @@ Dalvik虚拟机曾经是Android平台的核心组成部分之一，它的名字�
 
 还有一些Java虚拟机天生就注定不会应用在主流领域，或者不是单纯为了用于生产，甚至在设计之初就没有抱着商用的目的，仅仅是用于研究、验证某种技术和观点，又或者是作为一些规范的标准实现。这些虚拟机对于大多数不从事相关领域开发的Java程序员来说可能比较陌生，笔者列举几款较为有影响的：
 
-·KVM[1]
+- KVM[1]
 
 KVM中的K是“Kilobyte”的意思，它强调简单、轻量、高度可移植，但是运行速度比较慢。在Android、iOS等智能手机操作系统出现前曾经在手机平台上得到非常广泛应用。
 
-·Java Card VM
+- Java Card VM
 
 JCVM是Java虚拟机很小的一个子集，裁减了许多模块但通常支持绝大多数的常用加密算法。JCVM必须精简到能放入智能卡、SIM卡、银行信用卡、借记卡内，负责对Java Applet程序进行解释执行。
 
-·Squawk VM
+- Squawk VM
 
 Squawk VM是由Sun开发，运行于Sun SPOT（Sun Small Programmable Object Tech-nology，一种手持的Wi-Fi设备），也曾经运用于Java Card。这是一个Java代码比重很高的嵌入式虚拟机实现，其中诸如类加载器、字节码验证器、垃圾收集器、解释器、编译器和线程调度都是用Java语言完成的，仅仅靠C语言来编写设备I/O和必要的本地代码。
 
-·JavaInJava
+- JavaInJava
 
 JavaInJava是Sun公司在1997年～1998年间所研发的一个实验室性质的虚拟机，从名字就可以看出，它试图以Java语言来实现Java语言本身的运行环境，既所谓的“元循环”（Meta-Circular，是指使用语言自身来实现其运行环境）虚拟机。它必须运行在另外一个宿主虚拟机之上，内部没有即时编译器，代码只能以解释模式执行。在上世纪末主流原生的Java虚拟机都未能很好解决性能问题的时代，开发这种项目，其执行速度大家可想而知，不过通过元循环证明一门语言可以自举，是具有它的研究价值的。
 
-·Maxine VM
+- Maxine VM
 
 Maxine VM和上面的JavaInJava非常相似，它也是一个几乎全部以Java代码实现（只有用于启动Java虚拟机的加载器使用C语言编写）的元循环Java虚拟机。这个项目于2005年开始，到现在仍然在发展之中，比起JavaInJava，Maxine VM的执行效率就显得靠谱得多，它有先进的即时编译器和垃圾收集器，可在宿主模式或独立模式下执行，其执行效率已经接近HotSpot虚拟机Client模式的水平。后来有了从C1X编译器演进而来的Graal编译器的支持，就更加如虎添翼，执行效率有了进一步飞跃。Graal编译器现在已经是HotSpot的默认组件，是未来代替HotSpot中服务端编译器的希望。
 
-·Jikes RVM
+- Jikes RVM
 
 Jikes RVM是IBM开发的专门用来研究Java虚拟机实现技术的项目。曾用名为Jalapeño。与JavaInJava和Maxine一样，它也是一个元循环虚拟机。
 
-·IKVM.NET
+- IKVM.NET
 
 这是一个基于微软.NET框架实现的Java虚拟机，并借助Mono获得一定的跨平台能力。IKVM.NET的目标第一眼看起来的确很奇怪，可能在某些特殊情况下，在.NET上使用某些流行的Java库也许真的不算是伪需求？IKVM.NET可以将Class文件编译成.NET Assembly，在任意的CLI上运行。
 
 其他在本文中没有介绍到的Java虚拟机还有许多，笔者将自己所知的列举如下：
 
-·JamVM：http://jamvm.sourceforge.net/
-
-·CacaoVM：http://www.cacaovm.org/
-
-·SableVM：http://www.sablevm.org/
-
-·Kaffe：http://www.kaffe.org/
-
-·Jelatine JVM：http://jelatine.sourceforge.net/
-
-·NanoVM：http://www.harbaum.org/till/nanovm/index.shtml
-
-·MRP：https://github.com/codehaus/mrp
-
-·Moxie JVM：http://moxie.sourceforge.net/
+- JamVM：http://jamvm.sourceforge.net/
+- CacaoVM：http://www.cacaovm.org/
+- SableVM：http://www.sablevm.org/
+- Kaffe：http://www.kaffe.org/
+- Jelatine JVM：http://jelatine.sourceforge.net/
+- NanoVM：http://www.harbaum.org/till/nanovm/index.shtml
+- MRP：https://github.com/codehaus/mrp
+- Moxie JVM：http://moxie.sourceforge.net/
 
 [1] 这里把Java ME里面的虚拟机列为“少数派”是从大多数Java程序员的了解程度出发的，从虚拟机部署数量来讲，Java ME远比Java SE、Java EE的虚拟机多，毕竟服务器应用是无法在数量上和移动、嵌入式设备比较的。
 
@@ -401,31 +380,25 @@ HotSpot的定位是面向各种不同应用场景的全功能Java虚拟机[1]，
 
 但一门语言的功能、语法又是影响语言生产力和效率的重要因素，很多语言特性和语法糖不论有没有，程序也照样能写，但即使只是可有可无的语法糖，也是直接影响语言使用者的幸福感程度的关键指标。JDK 7的Coins项目结束以后，Java社区又创建了另外一个新的语言特性改进项目Amber，JDK 10至13里面提供的新语法改进基本都来自于这个项目，譬如：
 
-·JEP 286：Local-Variable Type Inference，在JDK 10中提供，本地类型变量推断。
-
-·JEP 323：Local-Variable Syntax for Lambda Parameters，在JDK 11中提供，JEP 286的加强，使它可以用在Lambda中。
-
-·JEP 325：Switch Expressions，在JDK 13中提供，实现switch语句的表达式支持。
-
-·JEP 335：Text Blocks，在JDK 13中提供，支持文本块功能，可以节省拼接HTML、SQL等场景里大量的“+”操作。
+- JEP 286：Local-Variable Type Inference，在JDK 10中提供，本地类型变量推断。
+- JEP 323：Local-Variable Syntax for Lambda Parameters，在JDK 11中提供，JEP 286的加强，使它可以用在Lambda中。
+- JEP 325：Switch Expressions，在JDK 13中提供，实现switch语句的表达式支持。
+- JEP 335：Text Blocks，在JDK 13中提供，支持文本块功能，可以节省拼接HTML、SQL等场景里大量的“+”操作。
 
 还有一些是仍然处于草稿状态或者暂未列入发布范围的JEP，可供我们窥探未来Java语法的变化，譬如：
 
-·JEP 301：Enhanced Enums，允许常量类绑定数据类型，携带额外的信息。
-
-·JEP 302：Lambda Leftovers，用下划线来表示Lambda中的匿名参数。
-
-·JEP 305：Pattern Matching for instanceof，用instanceof判断过的类型，在条件分支里面可以不需要做强类型转换就能直接使用。
+- JEP 301：Enhanced Enums，允许常量类绑定数据类型，携带额外的信息。
+- JEP 302：Lambda Leftovers，用下划线来表示Lambda中的匿名参数。
+- JEP 305：Pattern Matching for instanceof，用instanceof判断过的类型，在条件分支里面可以不需要做强类型转换就能直接使用。
 
 除语法糖以外，语言的功能也在持续改进之中，以下几个项目是目前比较明确的，也是受到较多关注的功能改进计划：
 
-·Project Loom：现在的Java做并发处理的最小调度单位是线程，Java线程的调度是直接由操作系统内核提供的（这方面的内容可见本书第12章），会有核心态、用户态的切换开销。而很多其他语言都提供了更加轻量级的、由软件自身进行调度的用户线程（曾经非常早期的Java也有绿色线程），譬如Golang的Groutine、D语言的Fiber等。Loom项目就准备提供一套与目前Thread类API非常接近的Fiber实现。
-
-·Project Valhalla：提供值类型和基本类型的泛型支持，并提供明确的不可变类型和非引用类型的声明。值类型的作用和价值在本书第10章会专门讨论，而不可变类型在并发编程中能带来很多好处，没有数据竞争风险带来了更好的性能。一些语言（如Scala）就有明确的不可变类型声明，而Java中只能在定义类时将全部字段声明为final来间接实现。基本类型的范型支持是指在泛型中引用基本数据类型
+- Project Loom：现在的Java做并发处理的最小调度单位是线程，Java线程的调度是直接由操作系统内核提供的（这方面的内容可见本书第12章），会有核心态、用户态的切换开销。而很多其他语言都提供了更加轻量级的、由软件自身进行调度的用户线程（曾经非常早期的Java也有绿色线程），譬如Golang的Groutine、D语言的Fiber等。Loom项目就准备提供一套与目前Thread类API非常接近的Fiber实现。
+- Project Valhalla：提供值类型和基本类型的泛型支持，并提供明确的不可变类型和非引用类型的声明。值类型的作用和价值在本书第10章会专门讨论，而不可变类型在并发编程中能带来很多好处，没有数据竞争风险带来了更好的性能。一些语言（如Scala）就有明确的不可变类型声明，而Java中只能在定义类时将全部字段声明为final来间接实现。基本类型的范型支持是指在泛型中引用基本数据类型
 
 不需要自动装箱和拆箱，避免性能损耗。
 
-·Project Panama：目的是消弭Java虚拟机与本地代码之间的界线。现在Java代码可以通过JNI来调用本地代码，这点在与硬件交互频繁的场合尤其常用（譬如Android）。但是JNI的调用方式充其量只能说是达到能用的标准而已，使用起来仍相当烦琐，频繁执行的性能开销也非常高昂，Panama项目的目标就是提供更好的方式让Java代码与本地代码进行调用和传输数据。
+- Project Panama：目的是消弭Java虚拟机与本地代码之间的界线。现在Java代码可以通过JNI来调用本地代码，这点在与硬件交互频繁的场合尤其常用（譬如Android）。但是JNI的调用方式充其量只能说是达到能用的标准而已，使用起来仍相当烦琐，频繁执行的性能开销也非常高昂，Panama项目的目标就是提供更好的方式让Java代码与本地代码进行调用和传输数据。
 
 随着Java每半年更新一次的节奏，新版本的Java中会出现越来越多其他语言里已有的优秀特性，相信博采众长的Java，还能继续保持现在的勃勃生机相当长时间。
 
@@ -515,25 +488,16 @@ sudo apt-get install openjdk-11-jdk
 
 需要下载的编译环境和依赖项目都齐备后，我们就可以按照默认配置来开始编译了，但通常我们编译OpenJDK的目的都不仅仅是为了得到在自己机器中诞生的编译成品，而是带着调试、定制化等需求，这样就必须了解OpenJDK提供的编译参数才行，这些参数可以使用“bash configure--help”命令查询到，笔者对它们中最有用的部分简要说明如下：
 
-·--with-debug-level=<level>：设置编译的级别，可选值为release、fastdebug、slowde-bug，越往后进行的优化措施就越少，带的调试信息就越多。还有一些虚拟机调试参数必须在特定模式下才可以使用。默认值为release。
-
-·--enable-debug：等效于--with-debug-level=fastdebug。
-
-·--with-native-debug-symbols=<method>：确定调试符号信息的编译方式，可选值为none、internal、external、zipped。
-
-·--with-version-string=<string>：设置编译JDK的版本号，譬如java-version的输出就会显示该信息。这个参数还有--with-version-<part>=<value>的形式，其中part可以是pre、opt、build、major、minor、security、patch之一，用于设置版本号的某一个部分。
-
-·--with-jvm-variants=<variant>[，<variant>...]：编译特定模式（Variants）的HotSpot虚拟机，可以多个模式并存，可选值为server、client、minimal、core、zero、custom。
-
-·--with-jvm-features=<feature>[，<feature>...]：针对--with-jvm-variants=custom时的自定义虚拟机特性列表（Features），可以多个特性并存，由于可选值较多，请参见help命令输出。
-
-·--with-target-bits=<bits>：指明要编译32位还是64位的Java虚拟机，在64位机器上也可以通过交叉编译生成32位的虚拟机。
-
-·--with-<lib>=<path>：用于指明依赖包的具体路径，通常使用在安装了多个不同版本的Bootstrap JDK和依赖包的情况。其中lib的可选值包括boot-jd、freetype、cups、x、alsa、libffi、jtreg、libjpeg、giflib、libpng、lcms、zlib。
-
-·--with-extra-<flagtype>=<flags>：用于设定C、C++和Java代码编译时的额外编译器参数，其中flagtype可选值为cflags、cxxflags、ldflags，分别代表C、C++和Java代码的参数。
-
-·--with-conf-name=<name>：指定编译配置名称，OpenJDK支持使用不同的配置进行编译，默认会根据编译的操作系统、指令集架构、调试级别自动生成一个配置名称，譬如“linux-x86_64-server-release”，如果在这些信息都相同的情况下保存不同的编译参数配置，就需要使用这个参数来自定义配置名称。
+- --with-debug-level=<level>：设置编译的级别，可选值为release、fastdebug、slowde-bug，越往后进行的优化措施就越少，带的调试信息就越多。还有一些虚拟机调试参数必须在特定模式下才可以使用。默认值为release。
+- --enable-debug：等效于--with-debug-level=fastdebug。
+- --with-native-debug-symbols=<method>：确定调试符号信息的编译方式，可选值为none、internal、external、zipped。
+- --with-version-string=<string>：设置编译JDK的版本号，譬如java-version的输出就会显示该信息。这个参数还有--with-version-<part>=<value>的形式，其中part可以是pre、opt、build、major、minor、security、patch之一，用于设置版本号的某一个部分。
+- --with-jvm-variants=<variant>[，<variant>...]：编译特定模式（Variants）的HotSpot虚拟机，可以多个模式并存，可选值为server、client、minimal、core、zero、custom。
+- --with-jvm-features=<feature>[，<feature>...]：针对--with-jvm-variants=custom时的自定义虚拟机特性列表（Features），可以多个特性并存，由于可选值较多，请参见help命令输出。
+- --with-target-bits=<bits>：指明要编译32位还是64位的Java虚拟机，在64位机器上也可以通过交叉编译生成32位的虚拟机。
+- --with-<lib>=<path>：用于指明依赖包的具体路径，通常使用在安装了多个不同版本的Bootstrap JDK和依赖包的情况。其中lib的可选值包括boot-jd、freetype、cups、x、alsa、libffi、jtreg、libjpeg、giflib、libpng、lcms、zlib。
+- --with-extra-<flagtype>=<flags>：用于设定C、C++和Java代码编译时的额外编译器参数，其中flagtype可选值为cflags、cxxflags、ldflags，分别代表C、C++和Java代码的参数。
+- --with-conf-name=<name>：指定编译配置名称，OpenJDK支持使用不同的配置进行编译，默认会根据编译的操作系统、指令集架构、调试级别自动生成一个配置名称，譬如“linux-x86_64-server-release”，如果在这些信息都相同的情况下保存不同的编译参数配置，就需要使用这个参数来自定义配置名称。
 
 以上是configure命令的部分参数，其他未介绍到的可以使用“bash configure--help”来查看，所有参数均通过以下形式使用：
 
@@ -567,14 +531,17 @@ Configuration summary:
 * JVM features:   server: 'aot cds cmsgc compiler1 compiler2 epsilongc g1gc graal jfr jni-check jvmci jvmti management nmt parallelgc serialgc services shenandoahgc vm-structs zgc'
 * OpenJDK target: OS: linux, CPU architecture: x86, address length: 64
 * Version string: 12-internal+0-adhoc.icyfenix.jdk12 (12-internal)
+
 Tools summary:
 * Boot JDK:       openjdk version "11.0.3" 2019-04-16 OpenJDK Runtime Environment (build 11.0.3+7-Ubuntu-1ubuntu218.04.1) OpenJDK 64-Bit Server VM (build 11.0.3+7-Ubuntu-1ubuntu218.04.1, mixed mode, sharing)  (at /usr/lib/jvm/java-11-openjdk-amd64)
 * Toolchain:      gcc (GNU Compiler Collection)
 * C Compiler:     Version 7.4.0 (at /usr/bin/gcc)
 * C++ Compiler:   Version 7.4.0 (at /usr/bin/g++)
+
 Build performance summary:
 * Cores to use:   4
 * Memory limit:   7976 MB
+
 ```
 
 在configure命令以及后面的make命令的执行过程中，会在“build/配置名称”目录下产生如下目录结构。不常使用C/C++的读者要特别注意，如果多次编译，或者目录结构成功产生后又再次修改了配置，必须先使用“make clean”和“make dist-clean”命令清理目录，才能确保新的配置生效。编译产生的目录结构以及用途如下所示：
