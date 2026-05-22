@@ -7,6 +7,7 @@ This section groups the JVM-oriented notes under `jvm/docs`.
 - [JVM Memory](content/jvm-memory.md)
 - [Class 文件结构](content/class-file-structure.md)
 - [Class 文件高级结构](content/class-file-advanced-structures.md)
+- [类加载器、双亲委派与线程上下文类加载器](content/class-loader-parent-delegation.md)
 - [从符号引用到直接引用](content/symbolic-reference-resolution.md)
 - [JVM 方法调用与返回指令](content/method-invocation-and-return.md)
 - [MethodHandle 与 invokedynamic](content/method-handle-invokedynamic.md)
