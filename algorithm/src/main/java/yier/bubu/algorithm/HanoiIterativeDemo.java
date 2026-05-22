@@ -8,49 +8,59 @@ public class HanoiIterativeDemo {
     private static class Frame {
         int n;
         char from;
-        char aux;
         char to;
+        char via;
         int state; // 0: 先处理左递归  1: 输出移动  2: 处理右递归
+        int c1;
+        int c2;
 
-        Frame(int n, char from, char aux, char to) {
+        Frame(int n, char from, char to, char via) {
             this.n = n;
             this.from = from;
-            this.aux = aux;
             this.to = to;
+            this.via = via;
         }
     }
 
     public static void main(String[] args) {
-        hanoi(3, 'A', 'B', 'C');
+        hanoi(3, 'A', 'C', 'B');
     }
 
-    public static void hanoi(int n, char from, char aux, char to) {
+    public static int hanoi(int n, char from, char to, char via) {
         if (n <= 0) {
-            return;
+            return 0;
         }
 
         Deque<Frame> stack = new ArrayDeque<Frame>();
-        stack.push(new Frame(n, from, aux, to));
+        int retval = 0;
+        stack.push(new Frame(n, from, to, via));
 
         while (!stack.isEmpty()) {
             Frame f = stack.peek();
 
             if (f.n == 1) {
-                System.out.println("把第1个盘子从 " + f.from + " 移到 " + f.to);
+                System.out.println(f.from + " -> " + f.to);
                 stack.pop();
+                retval = 1;
                 continue;
             }
 
             if (f.state == 0) {
                 f.state = 1;
-                stack.push(new Frame(f.n - 1, f.from, f.to, f.aux));
+                stack.push(new Frame(f.n - 1, f.from, f.via, f.to));
             } else if (f.state == 1) {
-                System.out.println("把第" + f.n + "个盘子从 " + f.from + " 移到 " + f.to);
+                f.c1 = retval;
+                System.out.println(f.from + " -> " + f.to);
+                retval = 1;
                 f.state = 2;
-                stack.push(new Frame(f.n - 1, f.aux, f.from, f.to));
+                stack.push(new Frame(f.n - 1, f.via, f.to, f.from));
             } else {
                 stack.pop();
+                f.c2 = retval;
+                retval = f.c1 + f.c2 + 1;
             }
         }
+
+        return retval;
     }
 }

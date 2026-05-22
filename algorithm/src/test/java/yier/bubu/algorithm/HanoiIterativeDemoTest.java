@@ -11,26 +11,33 @@ public class HanoiIterativeDemoTest {
     public void hanoi_shouldPrintMovesInRecursiveOrder() throws Exception {
         PrintStream originalOut = System.out;
         ByteArrayOutputStream output = new ByteArrayOutputStream();
+        int moves;
 
         try {
             System.setOut(new PrintStream(output, true, "UTF-8"));
 
-            HanoiIterativeDemo.hanoi(3, 'A', 'B', 'C');
+            moves = HanoiIterativeDemo.hanoi(3, 'A', 'C', 'B');
         } finally {
             System.setOut(originalOut);
         }
 
         String lineSeparator = System.lineSeparator();
         String expected = String.join(lineSeparator,
-                "把第1个盘子从 A 移到 C",
-                "把第2个盘子从 A 移到 B",
-                "把第1个盘子从 C 移到 B",
-                "把第3个盘子从 A 移到 C",
-                "把第1个盘子从 B 移到 A",
-                "把第2个盘子从 B 移到 C",
-                "把第1个盘子从 A 移到 C",
+                "A -> C",
+                "A -> B",
+                "C -> B",
+                "A -> C",
+                "B -> A",
+                "B -> C",
+                "A -> C",
                 "");
 
+        Assert.assertEquals(7, moves);
         Assert.assertEquals(expected, output.toString("UTF-8"));
+    }
+
+    @Test
+    public void hanoi_shouldReturnZeroWhenDiskCountIsNotPositive() {
+        Assert.assertEquals(0, HanoiIterativeDemo.hanoi(0, 'A', 'C', 'B'));
     }
 }

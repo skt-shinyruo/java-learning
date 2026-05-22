@@ -17,9 +17,9 @@
 
 汉诺塔的规则可以拆成三步：
 
-1. 把 `n - 1` 个盘子从 `from` 借助 `to` 移到 `aux`
+1. 把 `n - 1` 个盘子从 `from` 借助 `to` 移到 `via`
 2. 把第 `n` 个盘子从 `from` 移到 `to`
-3. 把 `n - 1` 个盘子从 `aux` 借助 `from` 移到 `to`
+3. 把 `n - 1` 个盘子从 `via` 借助 `from` 移到 `to`
 
 对应的递归代码是：
 
@@ -27,18 +27,19 @@
 public class HanoiRecursiveDemo {
 
     public static void main(String[] args) {
-        hanoi(3, 'A', 'B', 'C');
+        hanoi(3, 'A', 'C', 'B');
     }
 
-    private static void hanoi(int n, char from, char aux, char to) {
+    private static int hanoi(int n, char from, char to, char via) {
         if (n == 1) {
-            System.out.println("把第1个盘子从 " + from + " 移到 " + to);
-            return;
+            System.out.println(from + " -> " + to);
+            return 1;
         }
 
-        hanoi(n - 1, from, to, aux);
-        System.out.println("把第" + n + "个盘子从 " + from + " 移到 " + to);
-        hanoi(n - 1, aux, from, to);
+        int c1 = hanoi(n - 1, from, via, to);
+        hanoi(1, from, to, via);
+        int c2 = hanoi(n - 1, via, to, from);
+        return c1 + c2 + 1;
     }
 }
 ```
@@ -51,13 +52,15 @@ public class HanoiRecursiveDemo {
 
 要把递归改成手动模拟调用栈，就要先明确一个递归调用至少需要哪些信息。
 
-对 `hanoi(n, from, aux, to)` 来说，每个栈帧需要保存：
+对 `hanoi(n, from, to, via)` 来说，每个栈帧需要保存：
 
 - `n`：当前要移动多少个盘子
 - `from`：起始柱
-- `aux`：辅助柱
 - `to`：目标柱
+- `via`：辅助柱
 - `state`：当前这个函数执行到哪一步了
+- `c1`：左递归返回的移动次数
+- `c2`：右递归返回的移动次数
 
 `state` 可以理解成“返回地址”或“程序计数位置”。递归函数被子调用打断后，回来时必须知道下一步该继续执行哪里。
 
@@ -65,14 +68,16 @@ public class HanoiRecursiveDemo {
 
 ```text
 0
-  -> 先调用左递归 hanoi(n - 1, from, to, aux)
+  -> 先调用左递归 hanoi(n - 1, from, via, to)
 
 1
-  -> 左递归返回后，移动第 n 个盘子
-  -> 再调用右递归 hanoi(n - 1, aux, from, to)
+  -> 左递归返回后，保存 c1
+  -> 移动第 n 个盘子
+  -> 再调用右递归 hanoi(n - 1, via, to, from)
 
 2
-  -> 右递归返回后，当前函数结束
+  -> 右递归返回后，保存 c2
+  -> 当前函数返回 c1 + c2 + 1
 ```
 
 对应关系可以这样记：
@@ -97,50 +102,60 @@ public class HanoiIterativeDemo {
     private static class Frame {
         int n;
         char from;
-        char aux;
         char to;
+        char via;
         int state; // 0: 先处理左递归  1: 输出移动  2: 处理右递归
+        int c1;
+        int c2;
 
-        Frame(int n, char from, char aux, char to) {
+        Frame(int n, char from, char to, char via) {
             this.n = n;
             this.from = from;
-            this.aux = aux;
             this.to = to;
+            this.via = via;
         }
     }
 
     public static void main(String[] args) {
-        hanoi(3, 'A', 'B', 'C');
+        hanoi(3, 'A', 'C', 'B');
     }
 
-    public static void hanoi(int n, char from, char aux, char to) {
+    public static int hanoi(int n, char from, char to, char via) {
         if (n <= 0) {
-            return;
+            return 0;
         }
 
         Deque<Frame> stack = new ArrayDeque<Frame>();
-        stack.push(new Frame(n, from, aux, to));
+        int retval = 0;
+        stack.push(new Frame(n, from, to, via));
 
         while (!stack.isEmpty()) {
             Frame f = stack.peek();
 
             if (f.n == 1) {
-                System.out.println("把第1个盘子从 " + f.from + " 移到 " + f.to);
+                System.out.println(f.from + " -> " + f.to);
                 stack.pop();
+                retval = 1;
                 continue;
             }
 
             if (f.state == 0) {
                 f.state = 1;
-                stack.push(new Frame(f.n - 1, f.from, f.to, f.aux));
+                stack.push(new Frame(f.n - 1, f.from, f.via, f.to));
             } else if (f.state == 1) {
-                System.out.println("把第" + f.n + "个盘子从 " + f.from + " 移到 " + f.to);
+                f.c1 = retval;
+                System.out.println(f.from + " -> " + f.to);
+                retval = 1;
                 f.state = 2;
-                stack.push(new Frame(f.n - 1, f.aux, f.from, f.to));
+                stack.push(new Frame(f.n - 1, f.via, f.to, f.from));
             } else {
                 stack.pop();
+                f.c2 = retval;
+                retval = f.c1 + f.c2 + 1;
             }
         }
+
+        return retval;
     }
 }
 ```
@@ -148,13 +163,13 @@ public class HanoiIterativeDemo {
 这个版本和递归版是一一对应的：
 
 ```text
-hanoi(n - 1, from, to, aux)
+hanoi(n - 1, from, via, to)
 ```
 
 对应：
 
 ```java
-stack.push(new Frame(f.n - 1, f.from, f.to, f.aux));
+stack.push(new Frame(f.n - 1, f.from, f.via, f.to));
 ```
 
 而递归函数里的 `return`，对应：
