@@ -314,7 +314,130 @@ META-INF/services/接口全限定名
 
 ---
 
-## 7. 实践规则
+## 7. JDK 9 模块化后的类加载器
+
+JDK 9 引入 Java Platform Module System（JPMS）以后，JDK 自身不再主要以 `rt.jar`、`tools.jar` 这类大 jar 的形式组织，而是被拆成一组命名模块：
+
+```text
+java.base
+java.sql
+java.xml
+java.desktop
+jdk.compiler
+...
+```
+
+这并不表示“每个模块都有一个独立类加载器”。更准确的说法是：
+
+```text
+每个模块会被定义到某一个类加载器上；
+一个类加载器可以负责很多个模块。
+```
+
+也就是说，关系更接近：
+
+```text
+Module -> ClassLoader
+```
+
+而不是：
+
+```text
+Module -> 独立 ClassLoader
+```
+
+JDK 9 仍然保留三层内置类加载器结构，只是各层职责发生了变化：
+
+```text
+Bootstrap ClassLoader
+  -> 负责核心 Java SE / JDK 模块
+  -> 在 ClassLoader API 中仍然用 null 表示
+
+Platform ClassLoader
+  -> 取代 JDK 8 及以前的 Extension ClassLoader
+  -> 负责一部分平台级 Java SE / JDK 模块
+  -> 可通过 ClassLoader.getPlatformClassLoader() 获取
+
+Application ClassLoader
+  -> 负责应用类路径上的类
+  -> 负责应用模块路径上的普通应用模块
+  -> 不再保证是 java.net.URLClassLoader 的实例
+```
+
+以 JDK 9 的官方模块划分为例，`java.sql`、`java.scripting`、`java.xml.crypto` 等模块定义给平台类加载器；`java.base`、`java.xml`、`java.desktop`、`java.naming` 等模块定义给启动类加载器；应用模块路径上的普通模块默认定义给应用类加载器。具体模块清单会随 JDK 版本变化，理解时不要死记某个版本的完整列表，重点是“模块先归属到某个加载器”。
+
+模块化以后，平台类加载器和应用类加载器的加载流程不再只是机械地先问父加载器，而是先看系统中已经解析出来的命名模块：
+
+```text
+Application ClassLoader 收到类加载请求
+  -> 先检查这个类是否属于某个内置加载器负责的命名模块
+  -> 如果属于，就交给该模块的负责加载器
+  -> 如果不属于，再委派给父加载器 Platform ClassLoader
+  -> 父加载器也找不到时，再搜索应用 ClassPath
+  -> ClassPath 上找到的类属于应用加载器的 unnamed module
+```
+
+`Platform ClassLoader` 也类似：
+
+```text
+Platform ClassLoader 收到类加载请求
+  -> 先检查这个类是否属于某个内置加载器负责的命名模块
+  -> 如果属于，就交给该模块的负责加载器
+  -> 如果不属于，再委派给父加载器 Bootstrap ClassLoader
+```
+
+这里最容易误解的点是：平台类加载器在特殊场景下也可能把请求交给应用类加载器。例如升级模块路径上的某个模块依赖应用模块路径上的模块时，平台类加载器可能需要让应用类加载器加载目标模块里的类。这已经不是传统“只能子问父”的树状委派。
+
+因此 JDK 9 以后的加载顺序可以粗略记成：
+
+```text
+先看模块归属；
+模块归属明确时，交给负责该模块的加载器；
+模块归属不明确时，再回到父类委派和 ClassPath 搜索。
+```
+
+举两个例子：
+
+```text
+java.lang.String
+  -> 属于 java.base
+  -> java.base 由 Bootstrap ClassLoader 负责
+
+java.sql.DriverManager
+  -> 属于 java.sql
+  -> JDK 9 中 java.sql 由 Platform ClassLoader 负责
+```
+
+这也是为什么有些 JDK 8 时代的代码到了 JDK 9+ 会出问题：
+
+```java
+URLClassLoader loader =
+    (URLClassLoader) ClassLoader.getSystemClassLoader();
+```
+
+JDK 9+ 中应用类加载器和平台类加载器都不再保证是 `URLClassLoader`，这类强转可能直接抛 `ClassCastException`。
+
+还要注意类路径和模块路径的区别：
+
+```text
+ModulePath
+  -> 用来定位一个个模块
+  -> 模块有 module-info.class 或被识别为 automatic module
+
+ClassPath
+  -> 仍然按传统方式定位 class 和 resource
+  -> ClassPath 上的类进入 Application ClassLoader 的 unnamed module
+```
+
+如果同一个包既存在于命名模块中，又存在于 ClassPath 上，模块系统会优先维护命名模块的边界，ClassPath 上的同包内容可能不会按旧时代“补包”的方式参与加载。这样做是为了避免同一个包跨模块、跨加载器被拆开，破坏模块封装和类型一致性。
+
+最后补充一点：JPMS 的 `ModuleLayer` API 允许框架构造新的模块层，并选择“多个模块共用一个加载器”或“每个模块使用独立加载器”等策略。但这是自定义模块层的能力，不代表 JDK 启动层默认就是一个模块一个类加载器。
+
+官方口径可参考 OpenJDK [JEP 261: Module System](https://openjdk.org/jeps/261) 的 `Class loaders` 小节。
+
+---
+
+## 8. 实践规则
 
 设计插件或 SPI 机制时，可以按下面几条规则检查：
 
@@ -323,11 +446,15 @@ META-INF/services/接口全限定名
 3. 插件包不要重复打包公共 API，避免同名类型被不同加载器各自定义。
 4. 自定义类加载器优先重写 `findClass()`，不要轻易改写 `loadClass()`。
 5. 当“基础代码”需要回调应用实现时，通过 `Thread.currentThread().getContextClassLoader()` 或 `ServiceLoader` 获取应用侧实现。
+6. JDK 9+ 不要假设系统类加载器或平台类加载器是 `URLClassLoader`。
+7. 自定义类加载器在 JDK 9+ 中需要平台类时，优先委派给 `ClassLoader.getPlatformClassLoader()`，不要只按旧经验直接依赖 Bootstrap。
 
-最后可以把两句话分开记：
+最后可以把三句话分开记：
 
 ```text
 双亲委派：子加载器先问父加载器，保证基础类型一致。
 
 线程上下文类加载器：让父层基础代码有机会回头找到应用层实现。
+
+JDK 9 模块化：先看模块归属，再交给负责该模块的加载器。
 ```
