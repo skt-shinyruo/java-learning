@@ -14,6 +14,7 @@
 
   <modules>
     <module>base</module>
+    <module>algorithm</module>
     <module>jdk</module>
     <module>jvm</module>
     <module>nio</module>

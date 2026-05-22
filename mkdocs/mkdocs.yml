@@ -101,6 +101,9 @@ nav:
       - HyperLogLog: redis/content/hyperloglog.md
       - ListPack: redis/content/listpack.md
       - Redisson Watchdog: redis/content/redisson-watchdog.md
+  - Algorithm:
+      - Overview: algorithm/index.md
+      - 汉诺塔：递归与手动模拟函数调用栈: algorithm/content/hanoi-recursion-stack.md
   - JDK:
       - Overview: jdk/index.md
       - Array Basics: jdk/content/array-basics.md

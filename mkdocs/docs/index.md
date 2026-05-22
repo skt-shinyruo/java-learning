@@ -8,6 +8,7 @@ browser-readable entry point.
 - [Concurrency](concurrency/index.md): Java concurrency notes, JMM material, and reference pages.
 - [Distributed Transactions](distributed-transactions/index.md): Seata AT mode and related transaction mechanism notes.
 - [Redis](redis/index.md): Redis data structure and Redisson notes.
+- [Algorithm](algorithm/index.md): Algorithm, recursion, traversal, and implementation pattern notes.
 - [JDK](jdk/index.md): JDK-focused implementation notes.
 - [NIO](nio/index.md): Java NIO notes, direct memory examples, and copy-path explanations.
 - [JVM](jvm/index.md): JVM-focused learning notes.
