@@ -165,7 +165,142 @@ stack.pop();
 
 ---
 
-## 4. 所有递归都能这样改吗
+## 4. 更接近底层的 `pc + retval` 版本
+
+前面的 `state` 版本只关心汉诺塔递归的几个关键阶段。如果想更接近“解释器单步执行函数”的写法，可以给每个栈帧加一个 `pc`。
+
+`pc` 是 program counter，表示当前栈帧下一步要执行哪条语句。`retval` 保存最近一次子调用返回的值。
+
+这个版本等价于下面这个递归函数：
+
+```java
+private static int hanoi(int n, char from, char to, char via) {
+    if (n == 1) {
+        System.out.println(from + " -> " + to);
+        return 1;
+    }
+
+    int c1 = hanoi(n - 1, from, via, to);
+    hanoi(1, from, to, via);
+    int c2 = hanoi(n - 1, via, to, from);
+    return c1 + c2 + 1;
+}
+```
+
+对应的非递归 Java 实现：
+
+```java
+package yier.bubu.algorithm;
+
+import java.util.ArrayDeque;
+import java.util.Deque;
+
+public class HanoiPcDemo {
+
+    private static class Frame {
+        int pc;
+
+        int n;
+        char from;
+        char to;
+        char via;
+
+        int c1;
+        int c2;
+
+        Frame(int n, char from, char to, char via) {
+            this.n = n;
+            this.from = from;
+            this.to = to;
+            this.via = via;
+        }
+    }
+
+    public static void main(String[] args) {
+        hanoi(3, 'A', 'C', 'B');
+    }
+
+    public static int hanoi(int n, char from, char to, char via) {
+        if (n <= 0) {
+            return 0;
+        }
+
+        Deque<Frame> stack = new ArrayDeque<Frame>();
+        int retval = 0;
+
+        stack.push(new Frame(n, from, to, via));
+
+        while (!stack.isEmpty()) {
+            Frame f = stack.peek();
+            int nextPc = f.pc + 1;
+
+            switch (f.pc) {
+                case 0:
+                    if (f.n == 1) {
+                        System.out.println(f.from + " -> " + f.to);
+                        stack.pop();
+                        retval = 1;
+                    }
+                    break;
+
+                case 1:
+                    stack.push(new Frame(f.n - 1, f.from, f.via, f.to));
+                    break;
+
+                case 2:
+                    f.c1 = retval;
+                    break;
+
+                case 3:
+                    stack.push(new Frame(1, f.from, f.to, f.via));
+                    break;
+
+                case 4:
+                    stack.push(new Frame(f.n - 1, f.via, f.to, f.from));
+                    break;
+
+                case 5:
+                    f.c2 = retval;
+                    break;
+
+                case 6:
+                    stack.pop();
+                    retval = f.c1 + f.c2 + 1;
+                    break;
+
+                default:
+                    throw new IllegalStateException("Unknown pc: " + f.pc);
+            }
+
+            f.pc = nextPc;
+        }
+
+        return retval;
+    }
+}
+```
+
+这个版本里，`pc` 的含义是：
+
+- `0`：进入函数，判断 `n == 1`
+- `1`：调用左递归
+- `2`：左递归返回后，把 `retval` 保存到 `c1`
+- `3`：调用一次 `hanoi(1, from, to, via)`，完成中间移动
+- `4`：调用右递归
+- `5`：右递归返回后，把 `retval` 保存到 `c2`
+- `6`：当前函数返回 `c1 + c2 + 1`
+
+这里最容易忽略的一行是：
+
+```java
+f.pc = nextPc;
+```
+
+它必须在每次单步执行后更新当前栈帧的 `pc`。否则父栈帧在子调用返回后会重复执行同一个 `call`，程序会陷入无限循环。
+
+---
+
+## 5. 所有递归都能这样改吗
 
 原则上，大多数普通递归都可以改成显式栈版本。
 
@@ -189,7 +324,7 @@ stack.pop();
 
 ---
 
-## 5. 小结
+## 6. 小结
 
 汉诺塔适合用来理解递归，也适合用来理解“如何把递归改成显式栈”。
 
