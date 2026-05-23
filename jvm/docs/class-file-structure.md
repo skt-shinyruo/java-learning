@@ -1426,6 +1426,8 @@ JVM 执行 Java 方法时，会为每一次方法调用创建一个栈帧。栈�
 
 `max_locals` 决定这个方法的局部变量表最多需要多少个槽位，`max_stack` 决定操作数栈最多能压入多深。它们都写在方法的 `Code` 属性中。运行时的 `istore`、`astore` 这类指令不是把值写回 `.class` 文件，而是把当前栈帧里操作数栈顶的值弹出，保存到当前栈帧的局部变量表槽位中。
 
+`max_stack` 之所以能在编译期算出来，是因为每条字节码指令对操作数栈的影响是固定的。比如 `iadd` 永远是“弹出 2 个 `int`，压回 1 个 `int`”；`invokevirtual`、`invokeinterface`、`invokespecial`、`invokestatic` 这类调用指令则由方法描述符固定参数和返回值形状。编译器只要沿控制流图做一次抽象执行，取所有路径上的最大栈深，就能得到 `max_stack`。更完整的调用说明见 [JVM 方法调用与返回指令](method-invocation-and-return.md)。
+
 ```text
 iload / aload / fload ...
   -> 局部变量表槽位中的值复制到操作数栈
