@@ -121,6 +121,15 @@ java -XX:MaxMetaspaceSize=64m -cp jvm/target/classes yier.bubu.jvm.JvmMemoryApp 
 java -Xss256k -cp jvm/target/classes yier.bubu.jvm.JvmMemoryApp stack
 ```
 
+### 3.5 JVM 实战靶场：内存与 GC
+
+更完整的故障靶场见：
+
+- [JL-02 内存模型与 GC 实验](labs/jl-02-memory-gc-lab.md)
+- [JL-02-LAB-01 Heap OOM 排查 Runbook](runbooks/jl-02-heap-oom-runbook.md)
+- [JL-02-LAB-02 Direct Memory OOM 排查 Runbook](runbooks/jl-02-direct-memory-oom-runbook.md)
+- [JL-02-LAB-03 Metaspace OOM 排查 Runbook](runbooks/jl-02-metaspace-oom-runbook.md)
+
 ---
 
 ## 4)（可选）观察/排查的常用命令
