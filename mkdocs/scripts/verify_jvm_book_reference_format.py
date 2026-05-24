@@ -13,6 +13,9 @@ SPLIT_PARAGRAPH_START = re.compile(r"^[a-z0-9=({\[]")
 RAW_NUMERIC_REFERENCE = re.compile(r"\[(\d+)\]")
 RAW_NUMERIC_DEFINITION = re.compile(r"^\[(\d+)\]\s+")
 FOOTNOTE_REFERENCE = re.compile(r"\[\^[^\]]+\]")
+CODE_LITERAL_NAMES = r"(?:foo|bar|baz|array|arrays?|list|lists?|map|maps?|args?|i|j|k|itemArray|newItem)"
+CODE_LITERAL_NUMERIC_REFERENCE = re.compile(rf"(?<![A-Za-z0-9_]){CODE_LITERAL_NAMES}\[\d+\]")
+CODE_LITERAL_FOOTNOTE_REFERENCE = re.compile(rf"(?<![A-Za-z0-9_]){CODE_LITERAL_NAMES}\[\^[^\]]+\]")
 
 CHECKS = {
     "plain_heading_lines": re.compile(
@@ -83,6 +86,13 @@ def iter_noncode_lines():
             if in_code:
                 continue
             yield path, line_number, line
+
+
+def is_code_literal_numeric_reference(line, numeric_match):
+    for match in CODE_LITERAL_NUMERIC_REFERENCE.finditer(line):
+        if match.start() <= numeric_match.start() and numeric_match.end() <= match.end():
+            return True
+    return False
 
 
 def main() -> int:
@@ -179,6 +189,8 @@ def main() -> int:
             start = match.start()
             if start > 0 and line[start - 1] in ("!", "^"):
                 continue
+            if is_code_literal_numeric_reference(line, match):
+                continue
             raw_numeric_reference_hits.append((path, line_number, line))
             break
 
@@ -212,6 +224,19 @@ def main() -> int:
         failed = True
         print(f"code_block_footnote_reference: {len(code_footnote_hits)} issue(s)")
         for path, line_number, line in code_footnote_hits[:20]:
+            rel = path.relative_to(ROOT_DIR)
+            print(f"  {rel}:{line_number}: {line[:180]}")
+
+    code_literal_footnote_hits = [
+        (path, line_number, line)
+        for path, line_number, line in iter_noncode_lines()
+        if CODE_LITERAL_FOOTNOTE_REFERENCE.search(line)
+    ]
+
+    if code_literal_footnote_hits:
+        failed = True
+        print(f"code_literal_footnote_reference: {len(code_literal_footnote_hits)} issue(s)")
+        for path, line_number, line in code_literal_footnote_hits[:20]:
             rel = path.relative_to(ROOT_DIR)
             print(f"  {rel}:{line_number}: {line[:180]}")
 
