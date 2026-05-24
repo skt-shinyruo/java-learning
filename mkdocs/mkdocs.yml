@@ -115,6 +115,20 @@ nav:
   - JVM:
       - Overview: jvm/index.md
       - JVM Memory: jvm/content/jvm-memory.md
+      - JVM Lab:
+          - JL-02 内存模型与 GC 实验: jvm/content/labs/jl-02-memory-gc-lab.md
+          - JL-05 线上故障排查实验: jvm/content/labs/jl-05-troubleshooting-lab.md
+          - Runbooks:
+              - Heap OOM 排查: jvm/content/runbooks/jl-02-heap-oom-runbook.md
+              - Direct Memory OOM 排查: jvm/content/runbooks/jl-02-direct-memory-oom-runbook.md
+              - Metaspace OOM 排查: jvm/content/runbooks/jl-02-metaspace-oom-runbook.md
+              - 高 CPU 排查: jvm/content/runbooks/jl-05-high-cpu-runbook.md
+              - 静态集合内存泄漏排查: jvm/content/runbooks/jl-05-memory-leak-runbook.md
+              - 频繁 GC 排查: jvm/content/runbooks/jl-05-full-gc-runbook.md
+              - 死锁与线程阻塞排查: jvm/content/runbooks/jl-05-thread-block-runbook.md
+          - Reports:
+              - Heap OOM 复盘模板: jvm/content/reports/jl-02-heap-oom-report-template.md
+              - 故障排查复盘模板: jvm/content/reports/jl-05-troubleshooting-report-template.md
       - Class 文件结构: jvm/content/class-file-structure.md
       - Class 文件高级结构: jvm/content/class-file-advanced-structures.md
       - 类加载器、双亲委派与线程上下文类加载器: jvm/content/class-loader-parent-delegation.md
