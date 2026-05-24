@@ -28,6 +28,14 @@ public class TroubleshootingDemoConfigTest {
     }
 
     @Test
+    public void highCpuConfigFrom_shouldKeepSafeDefaults() {
+        HighCpuDemo.Config config = HighCpuDemo.Config.from(new String[0]);
+
+        Assert.assertEquals(1, config.threads);
+        Assert.assertEquals(120, config.seconds);
+    }
+
+    @Test
     public void staticLeakConfigFrom_shouldParseValues() {
         StaticMemoryLeakDemo.Config config = StaticMemoryLeakDemo.Config.from(new String[]{
                 "--mb", "64",
@@ -58,6 +66,16 @@ public class TroubleshootingDemoConfigTest {
     }
 
     @Test
+    public void staticLeakConfigFrom_shouldKeepSafeDefaults() {
+        StaticMemoryLeakDemo.Config config = StaticMemoryLeakDemo.Config.from(new String[0]);
+
+        Assert.assertEquals(64, config.totalMb);
+        Assert.assertEquals(1, config.chunkMb);
+        Assert.assertEquals(8, config.reportEvery);
+        Assert.assertEquals(120, config.sleepSeconds);
+    }
+
+    @Test
     public void threadBlockConfigFrom_shouldParseValues() {
         ThreadBlockDemo.Config config = ThreadBlockDemo.Config.from(new String[]{
                 "--waiters", "4",
@@ -77,5 +95,13 @@ public class TroubleshootingDemoConfigTest {
 
         Assert.assertEquals(1, config.waiters);
         Assert.assertEquals(1, config.sleepSeconds);
+    }
+
+    @Test
+    public void threadBlockConfigFrom_shouldKeepSafeDefaults() {
+        ThreadBlockDemo.Config config = ThreadBlockDemo.Config.from(new String[0]);
+
+        Assert.assertEquals(3, config.waiters);
+        Assert.assertEquals(120, config.sleepSeconds);
     }
 }
