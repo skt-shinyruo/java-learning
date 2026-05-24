@@ -1,4 +1,4 @@
-## 附录D　对象查询语言（OQL）简介[1]
+## 附录D　对象查询语言（OQL）简介[^section-d-5-note-1]
 
 D.1　SELECT子句
 
@@ -222,4 +222,4 @@ D.5　OQL语言的BNF范式
 
 ![第697页图片1](../images/page-0697-image-01.jpeg)
 
-[1] 本文翻译自Eclipse Memory Analyzer Tool（MAT，Eclipse出品的内存分析工具）的OQL帮助文档。
+[^section-d-5-note-1]: 本文翻译自Eclipse Memory Analyzer Tool（MAT，Eclipse出品的内存分析工具）的OQL帮助文档。
