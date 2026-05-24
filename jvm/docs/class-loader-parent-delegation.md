@@ -220,6 +220,38 @@ Thread.contextClassLoader = AppClassLoader
   -> 加载应用 ClassPath 下的 SPI 实现类
 ```
 
+### 4.1 Tomcat 中的 Spring 共享案例
+
+Tomcat 的类加载器架构里，`CommonClassLoader` 或 `SharedClassLoader` 可以加载多个 Web 应用共享的框架库，例如 Spring。单看双亲委派关系，会出现一个反向可见性问题：
+
+```text
+Common/Shared ClassLoader
+  -> 加载 Spring 框架类
+
+WebAppClassLoader
+  -> 加载 /WEB-INF/classes
+  -> 加载 /WEB-INF/lib
+```
+
+Web 应用代码可以向上委派，所以能使用 Common 或 Shared 范围里的 Spring；但 Spring 自己由上层加载器定义，上层加载器的搜索范围并不包含某个具体 Web 应用的 `/WEB-INF/classes` 和 `/WEB-INF/lib`。如果 Spring 只使用加载自己这个类的加载器，就无法扫描、反射创建或管理该 Web 应用里的业务类。
+
+Web 容器通常会在进入某个 Web 应用的启动流程、监听器、Servlet 或请求处理逻辑前，把当前线程的上下文类加载器设置为该应用自己的 `WebAppClassLoader`：
+
+```java
+Thread.currentThread().setContextClassLoader(webAppClassLoader);
+```
+
+Spring 这类框架在需要加载业务类时，可以取当前线程上下文类加载器：
+
+```java
+ClassLoader loader = Thread.currentThread().getContextClassLoader();
+Class<?> beanClass = Class.forName("com.example.UserService", false, loader);
+```
+
+此时 `loader` 指向当前 Web 应用的 `WebAppClassLoader`，因此能看见该应用的 `/WEB-INF/classes` 和 `/WEB-INF/lib`。也就是说，Spring 被放在 Common 或 Shared 中是为了共享框架本身；Spring 访问具体业务类则依赖线程上下文类加载器回到当前 Web 应用的加载范围。
+
+这个例子和 JDBC、JNDI 等 SPI 场景本质相同：上层基础代码不直接依赖某个下层加载器，而是通过当前线程暴露出来的上下文类加载器，找到调用现场对应的应用侧类。
+
 ---
 
 ## 5. ServiceLoader 的简化流程
