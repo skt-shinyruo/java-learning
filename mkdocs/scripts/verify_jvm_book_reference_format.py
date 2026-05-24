@@ -8,6 +8,8 @@ from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 CHAPTERS_DIR = ROOT_DIR / "references/深入理解Java虚拟机_JVM高级特性与最佳实践_第3版/chapters"
+SPLIT_PARAGRAPH_END = re.compile(r"[A-Za-z_][A-Za-z0-9_]*$")
+SPLIT_PARAGRAPH_START = re.compile(r"^[a-z0-9=({\[]")
 
 CHECKS = {
     "plain_heading_lines": re.compile(
@@ -15,6 +17,9 @@ CHECKS = {
     ),
     "preface_chapter_summary_heading": re.compile(
         r"^## 第\d+章　(?:介绍了|分享了|讲解了|分析了|通过)"
+    ),
+    "prose_heading_lines": re.compile(
+        r"^#{2,6} (?:\d+(?:\.\d+)+(?:、\d+(?:\.\d+)*)*节\S|第\d+章(?:至第\d+章)?\S)"
     ),
     "caption_footnote_glued": re.compile(
         r"^(?:图\d+-\d+|表\d+-\d+|代码清单\d+-\d+)[　 ].*\[\d+\]\s*\S"
@@ -105,6 +110,47 @@ def main() -> int:
         for path, line_number, line in blank_hits[:20]:
             rel = path.relative_to(ROOT_DIR)
             print(f"  {rel}:{line_number}: {line}")
+
+    split_paragraph_hits = []
+    for path in sorted(CHAPTERS_DIR.glob("*.md")):
+        if path.name == "README.md":
+            continue
+        in_code = False
+        previous_nonblank_line = None
+        previous_nonblank_line_number = 0
+        saw_blank_line = False
+        for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            if line.startswith("```"):
+                in_code = not in_code
+                saw_blank_line = False
+                continue
+            if in_code:
+                continue
+            if line == "":
+                saw_blank_line = True
+                continue
+            if (
+                saw_blank_line
+                and previous_nonblank_line is not None
+                and SPLIT_PARAGRAPH_END.search(previous_nonblank_line)
+                and SPLIT_PARAGRAPH_START.search(line)
+            ):
+                split_paragraph_hits.append(
+                    (path, previous_nonblank_line_number, previous_nonblank_line, line_number, line)
+                )
+            saw_blank_line = False
+            previous_nonblank_line = line
+            previous_nonblank_line_number = line_number
+
+    if split_paragraph_hits:
+        failed = True
+        print(f"split_paragraph_fragment: {len(split_paragraph_hits)} issue(s)")
+        for path, previous_line_number, previous_line, line_number, line in split_paragraph_hits[:20]:
+            rel = path.relative_to(ROOT_DIR)
+            print(
+                f"  {rel}:{previous_line_number}->{line_number}: "
+                f"{previous_line[:120]} / {line[:120]}"
+            )
 
     if failed:
         return 1
