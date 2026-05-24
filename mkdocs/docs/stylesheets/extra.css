@@ -104,6 +104,21 @@ html[data-docs-letter-spacing="extra"] {
   letter-spacing: normal;
 }
 
+/*
+ * Material renders h5/h6 intentionally small and low-contrast.
+ * This repo uses deep heading levels in long-form book content, so
+ * keep the hierarchy but make those levels readable.
+ */
+.md-typeset h5,
+.md-typeset h6 {
+  color: var(--md-default-fg-color);
+  font-size: 0.95em;
+  font-weight: 600;
+  line-height: 1.5;
+  margin: 1.1em 0 0.65em;
+  text-transform: none;
+}
+
 html .md-grid {
   max-width: calc(
     var(--docs-content-grid-width) +
