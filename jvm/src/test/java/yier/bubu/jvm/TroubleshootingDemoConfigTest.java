@@ -17,6 +17,17 @@ public class TroubleshootingDemoConfigTest {
     }
 
     @Test
+    public void highCpuConfigFrom_shouldNormalizeMinimums() {
+        HighCpuDemo.Config config = HighCpuDemo.Config.from(new String[]{
+                "--threads", "0",
+                "--seconds", "0"
+        });
+
+        Assert.assertEquals(1, config.threads);
+        Assert.assertEquals(1, config.seconds);
+    }
+
+    @Test
     public void staticLeakConfigFrom_shouldParseValues() {
         StaticMemoryLeakDemo.Config config = StaticMemoryLeakDemo.Config.from(new String[]{
                 "--mb", "64",
@@ -32,6 +43,21 @@ public class TroubleshootingDemoConfigTest {
     }
 
     @Test
+    public void staticLeakConfigFrom_shouldNormalizeMinimums() {
+        StaticMemoryLeakDemo.Config config = StaticMemoryLeakDemo.Config.from(new String[]{
+                "--mb", "0",
+                "--chunkMb", "0",
+                "--reportEvery", "0",
+                "--sleepSeconds", "-1"
+        });
+
+        Assert.assertEquals(1, config.totalMb);
+        Assert.assertEquals(1, config.chunkMb);
+        Assert.assertEquals(1, config.reportEvery);
+        Assert.assertEquals(0, config.sleepSeconds);
+    }
+
+    @Test
     public void threadBlockConfigFrom_shouldParseValues() {
         ThreadBlockDemo.Config config = ThreadBlockDemo.Config.from(new String[]{
                 "--waiters", "4",
@@ -40,5 +66,16 @@ public class TroubleshootingDemoConfigTest {
 
         Assert.assertEquals(4, config.waiters);
         Assert.assertEquals(11, config.sleepSeconds);
+    }
+
+    @Test
+    public void threadBlockConfigFrom_shouldNormalizeMinimums() {
+        ThreadBlockDemo.Config config = ThreadBlockDemo.Config.from(new String[]{
+                "--waiters", "0",
+                "--sleepSeconds", "0"
+        });
+
+        Assert.assertEquals(1, config.waiters);
+        Assert.assertEquals(1, config.sleepSeconds);
     }
 }

@@ -9,7 +9,12 @@ final class GcPressureDemo {
 
     static void run(String[] args) {
         Config config = Config.from(args);
-        int chunkBytes = config.chunkKb * 1024;
+        long chunkBytesLong = config.chunkKb * 1024L;
+        if (chunkBytesLong <= 0 || chunkBytesLong > Integer.MAX_VALUE) {
+            System.out.println("Invalid args: --chunkKb must fit in a positive int-sized byte array");
+            return;
+        }
+        int chunkBytes = (int) chunkBytesLong;
         long endAt = System.nanoTime() + config.seconds * 1_000_000_000L;
         long allocations = 0;
         Deque<byte[]> retained = new ArrayDeque<byte[]>();
@@ -40,7 +45,7 @@ final class GcPressureDemo {
             if (allocations % config.reportEvery == 0) {
                 System.out.println("allocations=" + allocations
                         + " retained=" + retained.size()
-                        + " approxAllocated=" + MemoryInspector.formatBytes(allocations * chunkBytes));
+                        + " approxAllocated=" + MemoryInspector.formatBytes(allocations * (long) chunkBytes));
                 MemoryInspector.printMemorySummary();
                 System.out.println();
             }

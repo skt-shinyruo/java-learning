@@ -1,5 +1,7 @@
 package yier.bubu.jvm;
 
+import java.util.concurrent.CountDownLatch;
+
 final class DeadlockDemo {
     private static final Object A = new Object();
     private static final Object B = new Object();
@@ -13,8 +15,9 @@ final class DeadlockDemo {
         System.out.println("Creating a monitor deadlock. sleepSeconds=" + sleepSeconds);
         System.out.println("Use jstack <pid> and search for 'Found one Java-level deadlock'.");
 
-        Thread a = new Thread(new LockTask(A, B), "jvm-lab-deadlock-a");
-        Thread b = new Thread(new LockTask(B, A), "jvm-lab-deadlock-b");
+        CountDownLatch ready = new CountDownLatch(2);
+        Thread a = new Thread(new LockTask(A, B, ready), "jvm-lab-deadlock-a");
+        Thread b = new Thread(new LockTask(B, A, ready), "jvm-lab-deadlock-b");
         a.start();
         b.start();
 
@@ -24,16 +27,19 @@ final class DeadlockDemo {
     private static final class LockTask implements Runnable {
         private final Object first;
         private final Object second;
+        private final CountDownLatch ready;
 
-        private LockTask(Object first, Object second) {
+        private LockTask(Object first, Object second, CountDownLatch ready) {
             this.first = first;
             this.second = second;
+            this.ready = ready;
         }
 
         @Override
         public void run() {
             synchronized (first) {
-                sleepQuietly(1000L);
+                ready.countDown();
+                awaitReady(ready);
                 synchronized (second) {
                     System.out.println("unreachable");
                 }
@@ -41,9 +47,9 @@ final class DeadlockDemo {
         }
     }
 
-    private static void sleepQuietly(long millis) {
+    private static void awaitReady(CountDownLatch ready) {
         try {
-            Thread.sleep(millis);
+            ready.await();
         } catch (InterruptedException ignored) {
             Thread.currentThread().interrupt();
         }

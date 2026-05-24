@@ -14,8 +14,15 @@ final class HeapOomDemo {
             return;
         }
 
-        int chunks = Math.max(1, config.totalMb / config.chunkMb);
-        int chunkBytes = config.chunkMb * 1024 * 1024;
+        long totalBytes = config.totalMb * 1024L * 1024L;
+        long chunkBytesLong = config.chunkMb * 1024L * 1024L;
+        if (chunkBytesLong <= 0 || chunkBytesLong > Integer.MAX_VALUE) {
+            System.out.println("Invalid args: --chunkMb must fit in a positive int-sized byte array");
+            return;
+        }
+
+        int chunkBytes = (int) chunkBytesLong;
+        int chunks = (int) ((totalBytes + chunkBytesLong - 1L) / chunkBytesLong);
 
         System.out.println("[HeapOomDemo]");
         System.out.println("Allocating heap byte arrays and holding references.");
@@ -24,20 +31,25 @@ final class HeapOomDemo {
         System.out.println();
 
         List<byte[]> retained = new ArrayList<byte[]>(chunks);
+        long allocatedBytes = 0L;
         for (int i = 0; i < chunks; i++) {
-            byte[] block = new byte[chunkBytes];
+            long remainingBytes = totalBytes - allocatedBytes;
+            int bytesToAllocate = (int) Math.min(chunkBytesLong, remainingBytes);
+            byte[] block = new byte[bytesToAllocate];
             block[0] = (byte) i;
             retained.add(block);
+            allocatedBytes += bytesToAllocate;
 
             if ((i + 1) % config.reportEvery == 0 || i == chunks - 1) {
                 System.out.println("allocatedChunks=" + (i + 1)
-                        + " approxAllocated=" + MemoryInspector.formatBytes((long) (i + 1) * chunkBytes));
+                        + " approxAllocated=" + MemoryInspector.formatBytes(allocatedBytes));
                 MemoryInspector.printMemorySummary();
                 System.out.println();
             }
         }
 
-        System.out.println("Holding references to prevent GC from freeing heap arrays. retained.size=" + retained.size());
+        System.out.println("Holding references to prevent GC from freeing heap arrays. retained.size=" + retained.size()
+                + " allocated=" + MemoryInspector.formatBytes(allocatedBytes));
         if (config.sleepSeconds > 0) {
             System.out.println("Sleeping " + config.sleepSeconds + "s (attach tools like jcmd/jmap if you want).");
             Thread.sleep(config.sleepSeconds * 1000L);

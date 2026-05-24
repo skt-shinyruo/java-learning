@@ -1,5 +1,7 @@
 package yier.bubu.jvm;
 
+import java.util.concurrent.CountDownLatch;
+
 final class ThreadBlockDemo {
     private static final Object MONITOR = new Object();
 
@@ -12,9 +14,10 @@ final class ThreadBlockDemo {
         System.out.println("Creating one lock holder and BLOCKED waiter threads. waiters=" + config.waiters + " sleepSeconds=" + config.sleepSeconds);
         System.out.println("Use jstack <pid> and inspect jvm-lab-thread-block-* thread states.");
 
-        Thread holder = new Thread(new Holder(config.sleepSeconds), "jvm-lab-thread-block-holder");
+        CountDownLatch holderReady = new CountDownLatch(1);
+        Thread holder = new Thread(new Holder(config.sleepSeconds, holderReady), "jvm-lab-thread-block-holder");
         holder.start();
-        Thread.sleep(300L);
+        holderReady.await();
 
         for (int i = 0; i < config.waiters; i++) {
             Thread waiter = new Thread(new Waiter(), "jvm-lab-thread-block-waiter-" + i);
@@ -43,14 +46,17 @@ final class ThreadBlockDemo {
 
     private static final class Holder implements Runnable {
         private final int sleepSeconds;
+        private final CountDownLatch ready;
 
-        private Holder(int sleepSeconds) {
+        private Holder(int sleepSeconds, CountDownLatch ready) {
             this.sleepSeconds = sleepSeconds;
+            this.ready = ready;
         }
 
         @Override
         public void run() {
             synchronized (MONITOR) {
+                ready.countDown();
                 sleepQuietly(sleepSeconds * 1000L);
             }
         }

@@ -11,8 +11,15 @@ final class StaticMemoryLeakDemo {
 
     static void run(String[] args) throws Exception {
         Config config = Config.from(args);
-        int chunkBytes = config.chunkMb * 1024 * 1024;
-        int chunks = Math.max(1, config.totalMb / config.chunkMb);
+        long totalBytes = config.totalMb * 1024L * 1024L;
+        long chunkBytesLong = config.chunkMb * 1024L * 1024L;
+        if (chunkBytesLong <= 0 || chunkBytesLong > Integer.MAX_VALUE) {
+            System.out.println("Invalid args: --chunkMb must fit in a positive int-sized byte array");
+            return;
+        }
+
+        int chunkBytes = (int) chunkBytesLong;
+        int chunks = (int) ((totalBytes + chunkBytesLong - 1L) / chunkBytesLong);
 
         System.out.println("[StaticMemoryLeakDemo]");
         System.out.println("Growing a static List<byte[]> to simulate heap retention.");
@@ -20,14 +27,18 @@ final class StaticMemoryLeakDemo {
         System.out.println("Use jcmd <pid> GC.class_histogram and heap dump tools to observe byte[] retained by a static field.");
         System.out.println();
 
+        long retainedBytes = 0L;
         for (int i = 0; i < chunks; i++) {
-            byte[] block = new byte[chunkBytes];
+            long remainingBytes = totalBytes - retainedBytes;
+            int bytesToAllocate = (int) Math.min(chunkBytesLong, remainingBytes);
+            byte[] block = new byte[bytesToAllocate];
             block[0] = (byte) i;
             RETAINED.add(block);
+            retainedBytes += bytesToAllocate;
 
             if ((i + 1) % config.reportEvery == 0 || i == chunks - 1) {
                 System.out.println("retainedChunks=" + RETAINED.size()
-                        + " approxRetained=" + MemoryInspector.formatBytes((long) RETAINED.size() * chunkBytes));
+                        + " approxRetained=" + MemoryInspector.formatBytes(retainedBytes));
                 MemoryInspector.printMemorySummary();
                 System.out.println();
             }
