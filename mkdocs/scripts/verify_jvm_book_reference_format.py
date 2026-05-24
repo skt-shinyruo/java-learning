@@ -12,6 +12,7 @@ SPLIT_PARAGRAPH_END = re.compile(r"[A-Za-z_][A-Za-z0-9_]*$")
 SPLIT_PARAGRAPH_START = re.compile(r"^[a-z0-9=({\[]")
 RAW_NUMERIC_REFERENCE = re.compile(r"\[(\d+)\]")
 RAW_NUMERIC_DEFINITION = re.compile(r"^\[(\d+)\]\s+")
+FOOTNOTE_REFERENCE = re.compile(r"\[\^[^\]]+\]")
 
 CHECKS = {
     "plain_heading_lines": re.compile(
@@ -192,6 +193,25 @@ def main() -> int:
         failed = True
         print(f"raw_numeric_footnote_definition: {len(raw_numeric_definition_hits)} issue(s)")
         for path, line_number, line in raw_numeric_definition_hits[:20]:
+            rel = path.relative_to(ROOT_DIR)
+            print(f"  {rel}:{line_number}: {line[:180]}")
+
+    code_footnote_hits = []
+    for path in sorted(CHAPTERS_DIR.glob("*.md")):
+        if path.name == "README.md":
+            continue
+        in_code = False
+        for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            if line.startswith("```"):
+                in_code = not in_code
+                continue
+            if in_code and FOOTNOTE_REFERENCE.search(line):
+                code_footnote_hits.append((path, line_number, line))
+
+    if code_footnote_hits:
+        failed = True
+        print(f"code_block_footnote_reference: {len(code_footnote_hits)} issue(s)")
+        for path, line_number, line in code_footnote_hits[:20]:
             rel = path.relative_to(ROOT_DIR)
             print(f"  {rel}:{line_number}: {line[:180]}")
 
