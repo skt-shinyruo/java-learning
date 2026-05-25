@@ -1475,6 +1475,10 @@ slot 3 -> total
 
 `compute` 的 `max_stack=5`、`max_locals=8` 比简单加法大得多，是因为它包含循环、lambda、匿名内部类、局部类对象创建和多个局部变量。`javap` 里的 `LocalVariableTable` 能看到局部变量名、作用范围和槽位，例如 `total`、`snapshot`、`task`、`printer`。
 
+局部变量和方法参数的 `final` 修饰符不会在局部变量槽位上留下“只读”标记。源码中的 `final int var = 0;` 不能再次赋值，是 Javac 在数据及控制流分析阶段拒绝了这种写法；到了字节码层面，只要类型、操作数栈和控制流满足验证规则，`istore`、`astore` 等指令仍然可以写入同一个局部变量槽位。换句话说，绕过 Javac 直接生成合法字节码时，JVM 验证器通常不会因为某个槽位在 Java 源码里曾经是 `final` 局部变量而拒绝 Class 文件。
+
+这个结论不能推广到字段。字段表有自己的 `access_flags`，`final` 字段会以 `ACC_FINAL` 记录在 Class 文件中，并牵涉构造器、类初始化、反射、JIT 常量折叠和 Java 内存模型等额外语义。
+
 还要注意 `long` 和 `double` 会占两个局部变量槽位。例如实例方法：
 
 ```java
