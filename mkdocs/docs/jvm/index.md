@@ -12,6 +12,7 @@ This section groups the JVM-oriented notes under `jvm/docs`.
 - [类加载器、双亲委派与线程上下文类加载器](content/class-loader-parent-delegation.md)
 - [从符号引用到直接引用](content/symbolic-reference-resolution.md)
 - [JVM 方法调用与返回指令](content/method-invocation-and-return.md)
+- [JDK 动态代理与 InvocationHandler](content/dynamic-proxy.md)
 - [MethodHandle 与 invokedynamic](content/method-handle-invokedynamic.md)
 - [HotSpot OopMap 与 GC Roots](content/gc/oopmap-gc-roots.md)
 - [ZGC 收集器](content/gc/zgc.md)

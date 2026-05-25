@@ -134,6 +134,7 @@ nav:
       - 类加载器、双亲委派与线程上下文类加载器: jvm/content/class-loader-parent-delegation.md
       - 从符号引用到直接引用: jvm/content/symbolic-reference-resolution.md
       - JVM 方法调用与返回指令: jvm/content/method-invocation-and-return.md
+      - JDK 动态代理与 InvocationHandler: jvm/content/dynamic-proxy.md
       - MethodHandle 与 invokedynamic: jvm/content/method-handle-invokedynamic.md
       - GC:
           - HotSpot OopMap 与 GC Roots: jvm/content/gc/oopmap-gc-roots.md
