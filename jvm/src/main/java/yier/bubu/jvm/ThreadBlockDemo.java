@@ -1,0 +1,81 @@
+package yier.bubu.jvm;
+
+import java.util.concurrent.CountDownLatch;
+
+final class ThreadBlockDemo {
+    private static final Object MONITOR = new Object();
+
+    private ThreadBlockDemo() {
+    }
+
+    static void run(String[] args) throws Exception {
+        Config config = Config.from(args);
+        System.out.println("[ThreadBlockDemo]");
+        System.out.println("Creating one lock holder and BLOCKED waiter threads. waiters=" + config.waiters + " sleepSeconds=" + config.sleepSeconds);
+        System.out.println("Use jstack <pid> and inspect jvm-lab-thread-block-* thread states.");
+
+        CountDownLatch holderReady = new CountDownLatch(1);
+        Thread holder = new Thread(new Holder(config.sleepSeconds, holderReady), "jvm-lab-thread-block-holder");
+        holder.start();
+        holderReady.await();
+
+        for (int i = 0; i < config.waiters; i++) {
+            Thread waiter = new Thread(new Waiter(), "jvm-lab-thread-block-waiter-" + i);
+            waiter.start();
+        }
+
+        holder.join();
+    }
+
+    static final class Config {
+        final int waiters;
+        final int sleepSeconds;
+
+        private Config(int waiters, int sleepSeconds) {
+            this.waiters = waiters;
+            this.sleepSeconds = sleepSeconds;
+        }
+
+        static Config from(String[] args) {
+            return new Config(
+                    Math.max(1, CliArgs.getInt(args, "--waiters", 3)),
+                    Math.max(1, CliArgs.getInt(args, "--sleepSeconds", 120))
+            );
+        }
+    }
+
+    private static final class Holder implements Runnable {
+        private final int sleepSeconds;
+        private final CountDownLatch ready;
+
+        private Holder(int sleepSeconds, CountDownLatch ready) {
+            this.sleepSeconds = sleepSeconds;
+            this.ready = ready;
+        }
+
+        @Override
+        public void run() {
+            synchronized (MONITOR) {
+                ready.countDown();
+                sleepQuietly(sleepSeconds * 1000L);
+            }
+        }
+    }
+
+    private static final class Waiter implements Runnable {
+        @Override
+        public void run() {
+            synchronized (MONITOR) {
+                System.out.println(Thread.currentThread().getName() + " acquired monitor");
+            }
+        }
+    }
+
+    private static void sleepQuietly(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException ignored) {
+            Thread.currentThread().interrupt();
+        }
+    }
+}
