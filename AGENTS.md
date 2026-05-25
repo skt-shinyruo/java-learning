@@ -39,3 +39,4 @@ Pull requests should describe the change, list affected modules or docs paths, l
 
 Do not overwrite generated or local workspace changes you did not make. Prefer updating source docs and scripts over editing generated files in `mkdocs/site/` directly.
 Do not modify content under `references/` unless the user explicitly requests it.
+Do not modify content under `mkdocs/docs/` unless the user explicitly requests it; prefer editing the source docs linked into MkDocs.
