@@ -1,11 +1,15 @@
 ---
 name: save-conversation-to-docs
-description: Use when the user asks to save, preserve, record, capture, add, or turn prior conversation content into repository documentation, notes, learning material, a knowledge base, Markdown docs, MkDocs pages, README sections, or similar long-lived project docs.
+description: Use only when the user explicitly invokes `$save-conversation-to-docs` or names `save-conversation-to-docs`; do not use for ordinary save, archive, documentation, notes, MkDocs, or README requests unless this skill is manually triggered.
 ---
 
 # Save Conversation to Docs
 
 Turn useful conversation content into durable repository documentation. Do not transcribe chat logs; extract stable knowledge, rewrite it in the repository's documentation style, and place it where future readers would expect to find it.
+
+## Manual Trigger Only
+
+Do not use this skill unless the user explicitly invokes `$save-conversation-to-docs` or names `save-conversation-to-docs`. If the user merely asks to save, archive, document, preserve, or add prior conversation content to docs without naming this skill, handle the request through the normal repository workflow instead.
 
 ## Workflow
 
