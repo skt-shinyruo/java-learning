@@ -1766,6 +1766,8 @@ Signature: (I)Lyier/bubu/jvm/ClassFileTour<Ljava/lang/Integer;>;
 
 这些签名分别用于类、字段和方法。没有它们，描述符只能看到擦除后的 `Number`、`List`、`ClassFileTour`。
 
+如果要把类型擦除、反射 `Type` 体系、`TypeReference` / `TypeToken` 以及字节码中的 descriptor 和 `Signature` 放在一起看，可以继续阅读 [Java 泛型、Signature 与 TypeReference](java-generics-signature-type-reference.md)。
+
 `InnerClasses` 记录内部类、成员类、局部类、匿名类之间的关系：
 
 ```text

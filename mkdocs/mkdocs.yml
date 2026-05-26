@@ -130,10 +130,12 @@ nav:
               - Heap OOM 复盘模板: jvm/content/reports/jl-02-heap-oom-report-template.md
               - 故障排查复盘模板: jvm/content/reports/jl-05-troubleshooting-report-template.md
       - Class 文件结构: jvm/content/class-file-structure.md
+      - Java 泛型、Signature 与 TypeReference: jvm/content/java-generics-signature-type-reference.md
       - Class 文件高级结构: jvm/content/class-file-advanced-structures.md
       - 类加载器、双亲委派与线程上下文类加载器: jvm/content/class-loader-parent-delegation.md
       - 从符号引用到直接引用: jvm/content/symbolic-reference-resolution.md
       - JVM 方法调用与返回指令: jvm/content/method-invocation-and-return.md
+      - HotSpot JIT 与 OSR: jvm/content/hotspot-jit-osr.md
       - JDK 动态代理与 InvocationHandler: jvm/content/dynamic-proxy.md
       - MethodHandle 与 invokedynamic: jvm/content/method-handle-invokedynamic.md
       - GC:
