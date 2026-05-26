@@ -1,6 +1,6 @@
 ## 附录D　对象查询语言（OQL）简介[^section-d-5-note-1]
 
-D.1　SELECT子句
+### D.1　SELECT子句
 
 SELECT子句用于确定查询语句需要从堆转储快照中选择什么内容。如果需要显示堆转储快照中的对象，并且浏览这些对象的引用关系，可以使用“*”，这与传统SQL语句中的习惯是一致的，如：
 
@@ -61,7 +61,7 @@ SELECT DISTINCT classof(s) FROM java.lang.String s
 
 上面的例子中，classof()函数的作用是返回对象所属的Java类，当然，所有字符串对象的所属类都是java.lang.String，所以如果上面的查询中没有加入DISTINCT关键字，查询结果就会返回与快照中的字符串数量一样多的行记录，并且每行记录的内容都是java.lang.String类型。
 
-D.2　FROM子句
+### D.2　FROM子句
 
 ### 1. FROM子句指定需要查询的类
 
@@ -127,7 +127,7 @@ SELECT * FROM OBJECTS java.lang.String
 
 这个查询的结果不是返回快照中所有的字符串，而是只有一个对象，也就是与java.lang.String类对应的Class对象。
 
-D.3　WHERE子句
+### D.3　WHERE子句
 
 ### 1. >=，<=，>，<，[NOT]LIKE，[NOT]IN（关系操作）
 
@@ -172,7 +172,7 @@ SELECT * FROM java.lang.String s
     WHERE s.@GCRootInfo != null
 ```
 
-D.4　属性访问器
+### D.4　属性访问器
 
 ### 1. 访问堆转储快照中对象的字段
 
@@ -216,7 +216,7 @@ D.4　属性访问器
 
 ![第695页图片2](../images/page-0695-image-02.jpeg)
 
-D.5　OQL语言的BNF范式
+### D.5　OQL语言的BNF范式
 
 ![第696页图片1](../images/page-0696-image-01.jpeg)
 
