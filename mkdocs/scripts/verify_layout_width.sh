@@ -148,6 +148,16 @@ if ! grep -Fq -- "--docs-sidebar-inner-offset" "$EXTRA_CSS"; then
   exit 1
 fi
 
+if ! grep -Fq "html .md-sidebar__scrollwrap" "$EXTRA_CSS"; then
+  echo "Missing sidebar scroll area height override."
+  exit 1
+fi
+
+if ! grep -Fq "max-height: calc(100vh - 5.4rem);" "$EXTRA_CSS"; then
+  echo "Sidebar scroll area should stay close to the viewport height."
+  exit 1
+fi
+
 if grep -Fq "calc(var(--docs-nav-width) - 11.5rem)" "$EXTRA_CSS"; then
   echo "Primary sidebar inner padding must not grow with nav width."
   exit 1

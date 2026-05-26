@@ -145,6 +145,10 @@ html .md-grid {
 }
 
 @media screen and (min-width: 60em) {
+  html .md-sidebar__scrollwrap {
+    max-height: calc(100vh - 5.4rem);
+  }
+
   html .md-sidebar--secondary {
     width: var(--docs-toc-width);
   }
