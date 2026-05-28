@@ -200,6 +200,8 @@ JMM 的核心思想是：
 
 这就是 `volatile` 能做“发布”的根本。
 
+容易混淆的是，`happens-before` 是 JMM 规范层面的推理规则；`read/load/use/assign/store/write` 是 JMM 的抽象内存交互模型；`lock`、`mfence`、`dmb` 等才是 JVM/CPU 的真实实现手段。三者的详细对应关系见 [`volatile-jmm.md`](./volatile-jmm.md) 的“阅读口径”和“happens-before 与 `read/load/use` 规则是什么关系”两节。
+
 ### 4.4 传递性
 
 如果：

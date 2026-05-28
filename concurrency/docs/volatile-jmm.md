@@ -16,6 +16,35 @@
   - `NonVolatileStopFlagDemo`（反例，概率性）
   - `NonVolatilePublishDemo`（反例，概率性）
 
+## 阅读口径：先分清规范、抽象模型和真实实现
+
+学习 `volatile` 时最容易混乱的原因，是很多资料会把三种层次的说法放在一起讲：
+
+| 常见说法 | 角度 | 是否真实实现 | 应该怎么理解 |
+|---|---|---|---|
+| `volatile` 写 happens-before 后续 `volatile` 读 | JMM 规范语义 | 不是实现 | 这是程序员用来推理可见性和有序性的规则，说明什么结果必须可见、什么顺序必须成立。 |
+| `read/load/use/assign/store/write` | JMM 抽象内存交互模型 | 不是实现 | 这是用“主内存/工作内存”的抽象动作解释变量如何被读取和写回，不等于 JVM 或 CPU 真的执行这些函数。 |
+| “每次读 volatile 前都要从主内存刷新” | 抽象模型/教学说法 | 不是字面实现 | 它强调不能长期使用线程本地旧值；真实机器仍然会使用寄存器、CPU cache 和缓存一致性协议。 |
+| “每次写 volatile 后都要同步回主内存” | 抽象模型/教学说法 | 不是字面实现 | 它强调 volatile 写必须对其他线程建立可见性；不表示每次都绕过缓存直接写物理内存。 |
+| `volatile` 禁止指令重排序 | JMM 有序性要求 | 不是说 CPU 完全不能乱序执行 | 更准确地说，是禁止相关读写在内存语义上跨过 volatile 边界，不能产生 JMM 不允许的可观察结果。 |
+| `StoreStore`、`StoreLoad`、`LoadLoad`、`LoadStore` | 屏障抽象/实现策略 | 接近实现，但仍是抽象分类 | JVM/JIT 用这些屏障语义约束编译器和 CPU 的读写顺序，不同平台会翻译成不同机器指令。 |
+| `lock addl $0x0, (%esp)`、`mfence`、`dmb` | JVM + CPU 实现 | 是具体实现手段 | 这是某些平台上实现 volatile 内存语义的机器级手段，不是 Java 规范要求必须使用的指令。 |
+
+所以要把这条链路分开看：
+
+```text
+JMM 规范要求
+  -> happens-before / volatile 变量规则
+
+JMM 抽象解释
+  -> 主内存、工作内存、read/load/use/assign/store/write
+
+JVM/CPU 真实实现
+  -> JIT 重排序限制、内存屏障、lock/mfence/dmb、缓存一致性协议
+```
+
+`happens-before` 和 `read/load/use/assign/store/write` 都属于规范或规范解释层面；真正落到机器上，才是内存屏障和具体 CPU 指令。
+
 ## 1. 为什么需要 volatile：问题是什么
 
 在没有任何同步手段（`volatile` / `synchronized` / `Lock` / 原子类等）的情况下：
@@ -226,6 +255,60 @@ count.increment();
 换句话说：
 - `ready` 相当于“发布开关/版本号”，`value` 相当于“被发布的数据”。
 - `volatile ready` 把“写入数据”与“发布标记”之间建立了 JMM 级别的顺序与可见性保证。
+
+### 4.1 happens-before 与 `read/load/use` 规则是什么关系
+
+同一个 `volatile` 发布例子，可以从三种角度解释。它们不是互相冲突，而是层次不同。
+
+规范语义角度，也就是 happens-before 角度：
+
+```text
+写线程：value = i
+  happens-before
+写线程：ready = i        // volatile 写
+  synchronizes-with / happens-before
+读线程：读取 ready == i   // volatile 读
+  happens-before
+读线程：读取 value
+```
+
+所以只要读线程观察到了 `ready == i`，JMM 就要求它也能看到这次发布之前的 `value = i`。这是程序员最应该优先使用的推理方式。
+
+抽象内存模型角度，也就是 `read/load/use/assign/store/write` 角度：
+
+```text
+volatile 读：
+read  -> load  -> use
+
+volatile 写：
+assign -> store -> write
+```
+
+这个角度想表达两件事：
+
+- 每次使用 `volatile` 值前，都不能只拿线程本地旧值糊弄过去，必须具备重新获取可见值的语义。
+- 每次修改 `volatile` 值后，都不能只停留在线程本地，必须具备让其他线程可见的语义。
+
+这些动作仍然是 JMM 的抽象动作，不是 HotSpot 或 CPU 里真的有同名函数。
+
+真实实现角度：
+
+```text
+JVM/JIT 识别 volatile 字段
+  -> 禁止相关编译器重排
+  -> 插入或利用内存屏障语义
+  -> 在不同 CPU 上生成对应机器指令
+```
+
+例如在 x86/x64 上，某些场景可能使用 `lock` 前缀指令或 `mfence`；在 ARM/AArch64 上可能使用 `dmb` 或 acquire/release 语义的 load/store。具体用哪条指令不是 Java 规范的一部分，只要最终满足 JMM 的 volatile 语义即可。
+
+因此可以把三种说法压缩成一句话：
+
+```text
+happens-before 说明 volatile 必须保证什么；
+read/load/use 说明 JMM 如何抽象描述这种保证；
+lock/mfence/dmb 说明某些 JVM 和 CPU 可能如何实现这种保证。
+```
 
 ## 5. 为什么反例默认跳过（@Ignore）
 
