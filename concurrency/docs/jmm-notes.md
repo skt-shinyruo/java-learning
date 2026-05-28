@@ -12,6 +12,7 @@
 
 如果你想按专题继续往下看，可以配合下面这些文档：
 
+- [`jmm-introduction.md`](./jmm-introduction.md)：入门版说明，先解释 JMM 是什么，以及 CPU 缓存、JIT 优化、重排序、多核架构为什么会造成可见性和有序性问题
 - [`thread-creation.md`](./thread-creation.md)：聚焦 `new Thread()` / `start()` 时 JVM 规范、HotSpot 实现和 JMM 分别在关注什么
 - [`volatile-jmm.md`](./volatile-jmm.md)：只聚焦 `volatile` 的可见性与发布语义
 - [`jcstress-ordering-partial.md`](./jcstress-ordering-partial.md)：用 JCStress 拆开“volatile 放在不同位置为什么不是等价写法”
@@ -111,6 +112,32 @@ ready = true;
 ```
 
 如果缺少同步，另一个线程有可能先看到 `ready = true`，再看到旧的 `data`。
+
+### 2.4 底层机制具体怎么制造这些问题
+
+JMM 要屏蔽底层差异，不是因为 CPU、编译器或 JIT “做错了”，而是因为它们都会在不破坏单线程结果的前提下优化程序。
+
+**CPU cache / store buffer 会影响可见性。** 多核 CPU 通常不会让每次读写都直接访问主内存。一个核心上的写入可能先进入本核心的 cache 或 store buffer，另一个核心仍然读到自己的旧视图。MESI 这类缓存一致性协议能让同一个地址的多个缓存副本最终趋于一致，但它不等于“一个 Java 线程写完后，所有线程立刻按程序语义看到这个写入”。
+
+**编译器和 JIT 优化会影响可见性。** 如果一个变量没有 `volatile`、锁或其他同步约束，优化器可以认为当前线程里的循环不需要反复重新读取这个变量。例如：
+
+```java
+while (!stop) {
+}
+```
+
+如果 `stop` 是普通字段，并且当前线程没有修改它，JIT 可能把它当成一个稳定值来优化。此时即使另一个线程写入 `stop = true`，当前线程也没有可靠保证能看到这个修改。问题不在于 JVM 忽略了别的线程，而在于代码没有给 JVM 一个跨线程同步边界。
+
+**指令重排序和多核观察顺序会影响有序性。** `as-if-serial` 只保证单线程看起来像按源码顺序执行，不保证其他线程也按同样顺序观察到所有变量的变化。对下面这种发布模式：
+
+```java
+data = 42;
+ready = true;
+```
+
+如果没有同步约束，编译器、CPU 或缓存传播过程都可能让读线程先看到 `ready == true`，但仍然看到旧的 `data`。多核环境会放大这个问题，因为读写线程可能真的同时运行在不同核心上，各自有寄存器、缓存、store buffer 和执行流水线。
+
+所以 JMM 的职责不是让所有共享变量自动线程安全，而是规定：当程序使用了 `volatile`、`synchronized`、`Thread.start()`、`Thread.join()`、安全发布等同步动作时，这些动作必须建立明确的可见性和有序性边界。
 
 ---
 
@@ -727,14 +754,15 @@ JDK 8 之后的 `ConcurrentHashMap` 可以概括成一句话：
 
 如果你是第一次系统学 JMM，建议按这个顺序读：
 
-1. 本文，先把 JMM 的主线建立起来
-2. [`thread-creation.md`](./thread-creation.md)，把线程启动/终止规则和 JVM 线程上下文建立过程连起来
-3. [`volatile-jmm.md`](./volatile-jmm.md)，把发布/可见性/反例吃透
-4. [`jcstress-ordering-partial.md`](./jcstress-ordering-partial.md)，把“同样用了 volatile，为什么 Case2 和 Case3 结论相反”这件事吃透
-5. [`cas-notes.md`](./cas-notes.md)，把原子类、CAS 自旋、HotSpot/CPU 实现链路补齐
-6. [`synchronized-notes.md`](./synchronized-notes.md)，把 monitor、字节码、锁语义补齐
-7. [`wait-notify.md`](./wait-notify.md)，把条件等待和 monitor 协作补齐
-8. [`lock-support.md`](./lock-support.md)，把 `park/unpark`、permit 和 AQS 底层阻塞原语补齐
-9. [`references/jmm/jsr-133-faq.md`](./references/jmm/jsr-133-faq.md)，再回到 JSR-133 FAQ 看官方口径
+1. [`jmm-introduction.md`](./jmm-introduction.md)，先用入门例子建立 JMM 的问题背景
+2. 本文，把 JMM 的主线完整建立起来
+3. [`thread-creation.md`](./thread-creation.md)，把线程启动/终止规则和 JVM 线程上下文建立过程连起来
+4. [`volatile-jmm.md`](./volatile-jmm.md)，把发布/可见性/反例吃透
+5. [`jcstress-ordering-partial.md`](./jcstress-ordering-partial.md)，把“同样用了 volatile，为什么 Case2 和 Case3 结论相反”这件事吃透
+6. [`cas-notes.md`](./cas-notes.md)，把原子类、CAS 自旋、HotSpot/CPU 实现链路补齐
+7. [`synchronized-notes.md`](./synchronized-notes.md)，把 monitor、字节码、锁语义补齐
+8. [`wait-notify.md`](./wait-notify.md)，把条件等待和 monitor 协作补齐
+9. [`lock-support.md`](./lock-support.md)，把 `park/unpark`、permit 和 AQS 底层阻塞原语补齐
+10. [`references/jmm/jsr-133-faq.md`](./references/jmm/jsr-133-faq.md)，再回到 JSR-133 FAQ 看官方口径
 
 这样读下来，概念、代码、规范、源码视角会连成一条线。

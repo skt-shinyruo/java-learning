@@ -4,19 +4,20 @@ This section groups the Java concurrency notes under `concurrency/docs`.
 
 ## Recommended Reading Order
 
-1. [JMM Notes](content/jmm-notes.md)
-2. [Thread Creation and Start](content/thread-creation.md)
-3. [Volatile and JMM](content/volatile-jmm.md)
-4. [JCStress Visibility](content/jcstress-visibility.md)
-5. [JCStress Partial Ordering](content/jcstress-ordering-partial.md)
-6. [Non-volatile Stop Flag and -Xint](content/non-volatile-stop-flag-and-xint.md)
-7. [CAS Notes](content/cas-notes.md)
-8. [Synchronized Notes](content/synchronized-notes.md)
-9. [Thread States](content/thread-states.md)
-10. [Wait / Notify](content/wait-notify.md)
-11. [LockSupport](content/lock-support.md)
-12. [ThreadLocal](content/thread-local.md)
-13. [Virtual Threads](content/virtual-threads.md)
+1. [JMM Introduction](content/jmm-introduction.md)
+2. [JMM Notes](content/jmm-notes.md)
+3. [Thread Creation and Start](content/thread-creation.md)
+4. [Volatile and JMM](content/volatile-jmm.md)
+5. [JCStress Visibility](content/jcstress-visibility.md)
+6. [JCStress Partial Ordering](content/jcstress-ordering-partial.md)
+7. [Non-volatile Stop Flag and -Xint](content/non-volatile-stop-flag-and-xint.md)
+8. [CAS Notes](content/cas-notes.md)
+9. [Synchronized Notes](content/synchronized-notes.md)
+10. [Thread States](content/thread-states.md)
+11. [Wait / Notify](content/wait-notify.md)
+12. [LockSupport](content/lock-support.md)
+13. [ThreadLocal](content/thread-local.md)
+14. [Virtual Threads](content/virtual-threads.md)
 
 ## Reference Material
 
