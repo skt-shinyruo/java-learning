@@ -8,6 +8,7 @@
 - **GC 不只扫描线程栈和寄存器，它还要枚举其他 GC Roots。**
 - **线程栈和寄存器最难准确扫描，因为 JIT 编译后引用位置会随执行点变化。**
 - **静态字段、JNI 引用、类加载器、锁对象、JVM 内部引用等通常由 JVM 自己维护的数据结构管理，相对更容易枚举。**
+- **局部变量或参数在“最后一次使用”之后，JIT 可以不再把它们当作活引用报告给 GC；`Reference.reachabilityFence` 用来显式延长这种可达性。**
 - **并发可达性分析的核心难点，是 GC 遍历对象图时用户线程还在修改引用，必须避免把活对象漏标成垃圾。**
 
 ---
@@ -151,7 +152,158 @@ JIT 编译后，变量也不一定老老实实待在解释器的局部变量表�
 
 ---
 
-## 5. 并发的可达性分析为什么难
+## 5. `reachabilityFence` 与引用活性
+
+`Reference.reachabilityFence(ref)` 解决的是一个更细的可达性问题：方法还在执行，不等于方法接收者对象一定会一直被当作 GC Root 可达。
+
+例如：
+
+```java
+new Resource().action();
+```
+
+外部没有变量保存这个 `Resource` 对象。`action` 是实例方法，所以刚进入方法时确实有一个隐含的接收者参数。可以把它理解成下面这样的伪代码：
+
+```text
+void action(Resource receiver) {
+    int i = receiver.myIndex;  // Java 源码里写作 this.myIndex
+    Resource.update(externalResourceArray[i]);
+}
+```
+
+但执行完：
+
+```java
+int i = this.myIndex;
+```
+
+以后，后续代码只需要局部变量 `i` 和静态数组 `externalResourceArray`，不再需要通过 `this` 访问 `Resource` 对象本身。JIT 做活性分析时可以认为：`this` 这个引用从这里开始已经是死引用。
+
+这和 OopMap 的关系在于：GC 到达安全点时，并不是把栈槽、寄存器里所有历史上出现过的值都当作引用。JIT 会通过 OopMap 告诉 GC：
+
+```text
+当前执行点上，哪些栈槽/寄存器仍然是活着的对象引用。
+```
+
+如果 `this` 已经不会再被后续代码使用，JIT 就可以不把它列入当前执行点的活引用集合。只要堆中、静态字段、JNI 句柄等其他地方也没有引用指向这个 `Resource` 对象，它就可能被判断为不可达。
+
+### 5.1 这不是 OSR
+
+这件事不是栈上替换（On-Stack Replacement, OSR）。OSR 指的是程序在解释执行或较低层级编译代码中运行一段热循环时，JVM 把当前正在执行的栈帧切换到更高层级的编译代码继续执行。OSR 关注的是“当前执行状态如何切到编译后代码”，可以参考 [HotSpot JIT 与 OSR](../hotspot-jit-osr.md)。
+
+`reachabilityFence` 相关的问题不是“换了一份代码继续执行”，而是“在某个执行点上，哪些引用仍然算活着”。这属于 JIT 活性分析、寄存器/栈槽分配和 GC Root 枚举的问题。
+
+### 5.2 JVM 为什么要让引用提前死亡
+
+让不再使用的引用提前死亡通常是好事。例如：
+
+```java
+void run() {
+    byte[] data = new byte[500 * 1024 * 1024];
+
+    use(data);
+
+    longRunningTask();
+}
+```
+
+`use(data)` 之后，如果后面已经不再访问 `data`，JVM 没必要把这个 500MB 数组一直保留到 `run` 方法返回。把死引用从 OopMap 的活引用集合里移除，可以让 GC 更早回收无用对象，也能降低寄存器压力、复用栈槽，减少不必要的根扫描。
+
+所以 JVM 的判断标准不是：
+
+```text
+变量所在的方法是否还没返回
+```
+
+而是：
+
+```text
+后续计算是否还可能通过这个引用访问对象
+```
+
+### 5.3 问题出在哪里
+
+如果对象本身只保存普通 Java 数据，提前死亡通常没有问题。麻烦来自资源管理类：对象的终结逻辑可能会释放文件描述符、堆外内存、native 句柄，或者清理某个外部资源表。
+
+可以简化成：
+
+```java
+class Resource {
+    private static ExternalResource[] externalResourceArray;
+
+    private int myIndex;
+
+    @Override
+    protected void finalize() {
+        externalResourceArray[myIndex] = null;
+    }
+
+    public void action() {
+        int i = myIndex;
+        Resource.update(externalResourceArray[i]);
+    }
+
+    private static void update(ExternalResource ext) {
+        ext.status = 1;
+    }
+}
+```
+
+调用：
+
+```java
+new Resource().action();
+```
+
+可能出现这样的顺序：
+
+```text
+1. action 开始执行，隐含参数 this 指向 Resource 对象。
+2. 读取 this.myIndex，把值复制到局部变量 i。
+3. 后续代码不再访问 this，JIT 认为 this 已经不是活引用。
+4. GC 在某个安全点发生，OopMap 中没有 this。
+5. 如果没有其他强引用，Resource 被判断为不可达，finalize 有机会执行。
+6. finalize 清理 externalResourceArray[myIndex]。
+7. action 后续逻辑仍在使用这个外部资源，行为就可能变得很诡异。
+```
+
+这里的反直觉点是：`action` 方法还没有返回，但 `Resource` 对象本身已经不一定是活引用。活的是局部变量 `i`、静态数组引用、传给 `update` 的参数等；`Resource` 这个“资源管理对象”本身可能已经不在 GC Roots 可达链上。
+
+### 5.4 `reachabilityFence` 做了什么
+
+Java 9 增加了：
+
+```java
+static void Reference.reachabilityFence(Object ref)
+```
+
+用法通常是：
+
+```java
+public void action() {
+    try {
+        int i = myIndex;
+        Resource.update(externalResourceArray[i]);
+    } finally {
+        Reference.reachabilityFence(this);
+    }
+}
+```
+
+这行代码的含义是：
+
+```text
+在执行到 reachabilityFence(this) 之前，
+this 必须仍然被视为强可达。
+```
+
+它不会永久阻止 GC，也不会复活已经不可达并完成清理的对象。它只是给当前代码段设置一个可达性边界：JIT 不能把 `this` 的活性提前收缩到这个边界之前。
+
+普通业务代码很少需要直接使用 `reachabilityFence`。它主要服务于底层资源管理代码，尤其是对象生命周期和外部资源生命周期容易被 JIT 活性分析拆开的场景。现代代码也应尽量避免依赖 `finalize`，优先使用显式关闭、`try-with-resources` 或 `Cleaner` 等更清晰的资源管理方式。
+
+---
+
+## 6. 并发的可达性分析为什么难
 
 从 GC Roots 出发继续扫描对象图，是追踪式垃圾收集器判断对象是否存活的核心步骤。最容易理解的做法是暂停所有用户线程，让对象图在扫描期间保持不变：
 
@@ -178,7 +330,7 @@ GC 正在标记对象是否存活
 
 真正不能接受的是另一种情况：**对象明明还活着，却被 GC 漏标成垃圾**。一旦这个对象被回收，用户线程后续再访问它，程序就会出错。
 
-### 5.1 三色标记
+### 6.1 三色标记
 
 三色标记是一种用来理解并发标记正确性的模型。它把对象分成三类：
 
@@ -196,7 +348,7 @@ GC 正在标记对象是否存活
 
 如果用户线程暂停，灰色波纹一路向外推进，不会有歧义。并发时，用户线程会修改引用关系，对象图可能在扫描过程中发生变化。
 
-### 5.2 对象消失问题
+### 6.2 对象消失问题
 
 假设某个时刻对象颜色和引用关系如下：
 
@@ -240,7 +392,7 @@ Root -> B(黑) -> C(白)
 
 只要破坏其中任意一个条件，就可以避免把活对象漏标成垃圾。
 
-### 5.3 增量更新
+### 6.3 增量更新
 
 增量更新破坏第一个条件：**不允许黑色对象悄悄新增到白色对象的引用。**
 
@@ -260,7 +412,7 @@ B.ref = C;
 
 CMS 的并发标记采用的是这个思路。
 
-### 5.4 原始快照 SATB
+### 6.4 原始快照 SATB
 
 原始快照（Snapshot At The Beginning，SATB）破坏第二个条件：**不允许通往白色对象的旧路径悄悄消失。**
 
@@ -280,7 +432,7 @@ A.ref = null;
 
 G1 和 Shenandoah 的并发标记采用的是这个思路。
 
-### 5.5 写屏障的作用
+### 6.5 写屏障的作用
 
 这里的写屏障可以理解为 JVM 插在引用写操作旁边的一小段记录逻辑。用户代码看起来只是普通赋值：
 
@@ -297,8 +449,10 @@ obj.field = newValue;
 
 增量更新记录的是“新增了什么引用”，SATB 记录的是“删除或覆盖前的旧引用”。两者目标相同：让并发标记在对象图不断变化时，仍然不会漏掉活对象。
 
-## 6. 一句话总结
+## 7. 一句话总结
 
 OopMap 是 HotSpot 为准确式 GC 准备的“引用位置地图”。它主要告诉 GC：在某个安全点，线程栈和寄存器中哪些位置保存着对象引用。GC 仍然要枚举所有类型的 GC Roots，再从这些根引用出发遍历堆中的活对象。
+
+JIT 可以让不再使用的局部变量或参数提前从活引用集合中消失，这通常能减少无谓的对象保活；`Reference.reachabilityFence` 则是在少数资源管理场景中，显式要求某个对象至少活到指定代码位置。
 
 并发可达性分析进一步解决的是：从 GC Roots 往下遍历对象图时，如何让标记阶段和用户线程一起运行。它的底线是不能漏标活对象；多标出一点浮动垃圾可以接受，误回收活对象不可以接受。

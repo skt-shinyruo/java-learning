@@ -9,14 +9,14 @@
 - 对象头里的 Mark Word / Klass Pointer 分别用来干什么
 - 数组对象的布局（数组头、length、元素区）
 - CompressedOops / CompressedClassPointers 如何改变引用宽度与对象头大小
-- 如何用 JOL 打印你机器上的真实布局
+- 如何估算对象大小，以及用 JOL / Instrumentation 获取实际大小
 
 > 备注：本文讨论的是 HotSpot/OpenJDK 的常见实现。对象头大小、字段布局、对齐值会受 **JDK 版本 / GC / JVM 参数**
 > 影响；不要把这里的数字当成“语言规范保证”，以 JOL 实测为准。
 
 ---
 
-## 1) 对象 vs 引用（reference / oop）
+## 1. 对象 vs 引用（reference / oop）
 
 Java 语言层面你写的：
 
@@ -40,7 +40,7 @@ Foo x = new Foo();
 
 ---
 
-## 2) 普通对象在堆里的基本形状：header + instance + padding
+## 2. 普通对象在堆里的基本形状：header + instance + padding
 
 绝大多数“普通对象”（非数组）在堆中的布局都可以抽象为：
 
@@ -137,7 +137,7 @@ tailPadding = alignedSize - rawSize   // 取值范围 0..(alignment-1)
 
 ---
 
-## 3) 对象头之一：Mark Word（身份/锁/GC 的复用槽）
+## 3. 对象头之一：Mark Word（身份/锁/GC 的复用槽）
 
 在 64-bit HotSpot 上，Mark Word 常见为 **8 字节**。它是一个“复用槽”，不同状态下含义不同（不是固定格式一直不变）。
 
@@ -154,7 +154,7 @@ tailPadding = alignedSize - rawSize   // 取值范围 0..(alignment-1)
 
 ---
 
-## 4) 对象头之二：Klass Pointer（类元数据入口）
+## 4. 对象头之二：Klass Pointer（类元数据入口）
 
 每个对象都需要知道“自己是什么类型”，以支持：
 
@@ -179,7 +179,7 @@ HotSpot 做法是：在对象头里放一个指向类元数据的指针，常被
 
 ---
 
-## 5) 实例字段怎么存：offset、重排、对齐与“填洞”
+## 5. 实例字段怎么存：offset、重排、对齐与“填洞”
 
 字段在对象里不是“按源码顺序线性排下去”这么简单，原因包括：
 
@@ -199,7 +199,7 @@ HotSpot 做法是：在对象头里放一个指向类元数据的指针，常被
 
 ---
 
-## 6) 数组对象：数组头（含 length）+ 元素区
+## 6. 数组对象：数组头（含 length）+ 元素区
 
 数组也是对象，所以它也有对象头；此外它还必须保存长度：
 
@@ -225,7 +225,7 @@ HotSpot 做法是：在对象头里放一个指向类元数据的指针，常被
 
 ---
 
-## 7) CompressedOops / CompressedClassPointers：压缩的到底是什么
+## 7. CompressedOops / CompressedClassPointers：压缩的到底是什么
 
 压缩的对象指针通常有两类（名字很像，但压缩目标不同）：
 
@@ -239,7 +239,7 @@ HotSpot 做法是：在对象头里放一个指向类元数据的指针，常被
 
 ---
 
-## 8) 怎么在你的 JVM 上把“真实布局”打印出来（JOL）
+## 8. 怎么在你的 JVM 上把“真实布局”打印出来（JOL）
 
 建议把以下两类信息一起看：
 
@@ -270,7 +270,101 @@ mvn -pl jvm -am -Dsurefire.failIfNoSpecifiedTests=false -Dtest=JavaObjectLayoutJ
 
 ---
 
-## 9) 下一步：再去看 padding（内部/尾部）
+## 9. 对象大小速算与获取方式
+
+讨论对象大小时，先区分两个口径：
+
+- **shallow size**：只算对象自身占用，包括对象头、实例字段和 padding；不递归计算引用指向的其他对象。
+- **deep / retained size**：把对象引用出去的对象图也算进去，通常需要堆分析工具或 JOL `GraphLayout` 这类对象图工具辅助判断。
+
+大多数“一个 Java 对象有多大”的手算，默认算的是 **shallow size**。
+
+### 9.1 手算 shallow size
+
+以常见的 64-bit HotSpot、开启 `UseCompressedOops` / `UseCompressedClassPointers`、`ObjectAlignmentInBytes=8` 为例：
+
+| 内容 | 常见大小 |
+| --- | ---: |
+| 普通对象头 | 12B（8B Mark Word + 4B Klass Pointer） |
+| 数组对象头 | 16B（对象头 + 4B length） |
+| `boolean` / `byte` | 1B |
+| `char` / `short` | 2B |
+| `int` / `float` | 4B |
+| `long` / `double` | 8B |
+| 对象引用字段 / `Object[]` 元素 | 4B（压缩 oop 开启时） |
+| 对象引用字段 / `Object[]` 元素 | 8B（压缩 oop 关闭时） |
+
+普通对象可以按下面的思路估算：
+
+```text
+rawSize = objectHeaderSize + fieldsSize + internalPadding
+objectSize = align_up(rawSize, ObjectAlignmentInBytes)
+```
+
+数组对象可以按下面的思路估算：
+
+```text
+rawSize = arrayHeaderSize + elementSize * length
+arraySize = align_up(rawSize, ObjectAlignmentInBytes)
+```
+
+几个典型例子：
+
+```text
+new Object()
+= 12B header + 4B tail padding
+= 16B
+
+class OneInt { int x; }
+= 12B header + 4B int
+= 16B
+
+class OneLong { long x; }
+= 12B header + 4B internal padding + 8B long
+= 24B
+
+new int[3]
+= 16B array header + 3 * 4B int + 4B tail padding
+= 32B
+```
+
+手算只能做估算，因为 HotSpot 可能重排字段、复用对象头后的空洞，也可能因为 JVM 参数或 JDK 版本改变对象头和引用宽度。
+
+### 9.2 用 JOL 获取布局与大小
+
+JOL 是本仓库里最推荐的验证方式。查看单个对象的 shallow layout：
+
+```java
+System.out.println(ClassLayout.parseInstance(obj).toPrintable());
+```
+
+如果要看一个对象图的大致占用，可以使用 JOL 的 `GraphLayout`：
+
+```java
+System.out.println(GraphLayout.parseInstance(obj).toFootprint());
+```
+
+`ClassLayout` 适合解释对象头、字段 offset、padding 和实例大小；`GraphLayout` 更适合观察“这个对象连着引用出去的一组对象”大约占多少空间。
+
+### 9.3 用 Instrumentation 获取 shallow size
+
+JDK 还提供了 `java.lang.instrument.Instrumentation#getObjectSize(Object)`：
+
+```java
+long bytes = instrumentation.getObjectSize(obj);
+```
+
+它的特点是：
+
+- 返回的是对象自身的 **shallow size**，不递归包含引用对象。
+- 需要通过 Java Agent 拿到 `Instrumentation` 实例，普通 `main` 方法里不能直接 new 出来。
+- 返回值是 JVM 实现相关的近似结果，适合观测和排查，不适合作为业务逻辑里的稳定协议。
+
+实践里通常优先用 JOL 理解布局；需要在 agent 或诊断工具里批量采样对象自身大小时，再考虑 `Instrumentation#getObjectSize()`。
+
+---
+
+## 10. 下一步：再去看 padding（内部/尾部）
 
 当你对“对象头 + 字段 offset + 对齐”这三件事有感觉后，再读 padding 会顺很多：
 

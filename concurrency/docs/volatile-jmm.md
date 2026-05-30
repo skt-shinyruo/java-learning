@@ -310,6 +310,68 @@ read/load/use 说明 JMM 如何抽象描述这种保证；
 lock/mfence/dmb 说明某些 JVM 和 CPU 可能如何实现这种保证。
 ```
 
+### 4.2 双检锁为什么需要 `volatile`
+
+双重检查锁（Double-Checked Locking, DCL）的典型写法如下，仓库里的示例见 `base/src/main/java/yier/bubu/base/singleton/DoubleCheckedLockingSingleton.java`：
+
+```java
+class Singleton {
+    private static volatile Singleton instance;
+
+    public static Singleton getInstance() {
+        if (instance == null) {
+            synchronized (Singleton.class) {
+                if (instance == null) {
+                    instance = new Singleton();
+                }
+            }
+        }
+        return instance;
+    }
+}
+```
+
+这里 `volatile` 不是为了互斥。互斥由 `synchronized` 完成；`volatile` 是为了在第一次 `if (instance == null)` 这种锁外读取场景下，安全发布已经初始化完成的对象。
+
+关键问题在于，`instance = new Singleton()` 不是一个不可拆分的原子动作。概念上它至少包含三步：
+
+```text
+1. 分配对象内存
+2. 调用构造方法初始化对象
+3. 把对象引用赋值给 instance
+```
+
+如果 `instance` 不是 `volatile`，编译器、JIT 或 CPU 在不破坏单线程语义的前提下，可能让其他线程观察到类似下面的效果：
+
+```text
+1. 分配对象内存
+3. 把对象引用赋值给 instance
+2. 调用构造方法初始化对象
+```
+
+此时线程 A 刚把引用写入 `instance`，对象却还没有完成初始化。线程 B 进入 `getInstance()`，在锁外第一次判断时看到 `instance != null`，就会直接返回这个对象，绕过 `synchronized` 和第二次检查。结果可能是读到字段默认值、依赖对象为 `null`，或者出现其他不稳定行为。
+
+从 JMM 角度看，问题不只是“重排”这一个词，还包括缺少 happens-before 关系：
+
+- 线程 A 在同步块里完成构造并写入 `instance`；
+- 线程 B 的第一次读取发生在同步块外；
+- 如果 `instance` 不是 `volatile`，这次锁外读取与线程 A 的写入之间没有可靠的 happens-before 关系。
+
+`volatile` 通过发布/获取语义解决这个问题：
+
+- 写线程在构造对象之后执行 `volatile` 写：`instance = new Singleton()`；
+- `volatile` 写具备 release 效果，它之前的普通写，也就是构造过程中的字段初始化，不能在内存语义上被重排到这个 `volatile` 写之后；
+- 读线程读取 `instance` 时执行 `volatile` 读；
+- `volatile` 读具备 acquire 效果，它之后对对象字段的读取不能在内存语义上跑到这个 `volatile` 读之前；
+- 对同一个 `volatile` 变量的写 happens-before 后续读，因此线程 B 只要读到非 `null` 的 `instance`，就必须能看到线程 A 在发布前完成的初始化结果。
+
+所以，双检锁里 `volatile` 的作用可以压缩成一句话：
+
+```text
+synchronized 负责“只初始化一次”；
+volatile 负责“锁外读到的引用一定是安全发布后的引用”。
+```
+
 ## 5. 为什么反例默认跳过（@Ignore）
 
 对应测试：

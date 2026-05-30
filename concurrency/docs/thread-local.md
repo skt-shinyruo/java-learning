@@ -109,6 +109,8 @@ private static final ThreadLocal<UserContext> CTX =
 - `CTX.set(...)` 还能更新当前线程对应的值
 - 正常生命周期内完全不受影响
 
+这也是为什么很多工程里的 `ThreadLocal` key 基本不会被回收：它们通常被定义成类字段，甚至是 `static final` 字段。只要这个类还没被卸载，静态字段就会一直强引用着那个 `ThreadLocal` 实例，弱引用 key 自然不会变成 `null`。
+
 真正会让 key 被 GC 清掉的，往往是这种写法：
 
 ```java
@@ -121,7 +123,7 @@ new ThreadLocal<String>().set("x");
 - `ThreadLocalMap` 里的 key 可能变成 `null`
 - 但 value 可能还留在线程的 map 里
 
-这时你已经没有那个 `ThreadLocal` 实例了，所以也谈不上“继续正常使用它”。从语义上说，这种 key 被清掉并不是功能错误，而是 JVM 在告诉你：这个 `ThreadLocal` 句柄本身已经没人持有了。
+这时你已经没有那个 `ThreadLocal` 实例了，所以也谈不上“继续正常使用它”。`ThreadLocal` 对象本身就是访问当前线程 value 的 key；如果这个 key 已经被回收，说明业务代码也已经没有同一个 `ThreadLocal` 句柄可以拿来执行 `get()`。从语义上说，这种 key 被清掉并不是功能错误，而是 JVM 在告诉你：这个 `ThreadLocal` 句柄本身已经没人持有了。
 
 因此，要把两件事分开：
 
@@ -155,6 +157,42 @@ Entry
 
 `ThreadLocalMap` 并不是在 GC 一发生就立刻全量清理 stale entry。它通常是在后续执行 `get()`、`set()`、`remove()` 等操作时，顺手做一部分清理；或者等线程结束后，整张 map 一起被回收。
 
+不过，并不是所有 `ThreadLocal` 内存泄漏都来自“临时 `ThreadLocal` 对象被 GC 后留下 stale entry”。更准确地说，常见问题有两类。
+
+第一类是临时 `ThreadLocal`：
+
+```java
+void foo() {
+    ThreadLocal<byte[]> local = new ThreadLocal<>();
+    local.set(new byte[10 * 1024 * 1024]);
+}
+```
+
+方法结束后，`local` 没有强引用了，key 可能被 GC 清成 `null`，但 value 还可能暂时留在线程的 `ThreadLocalMap` 里。这就是典型的 stale entry。
+
+第二类是更常见的工程写法：`ThreadLocal` 是 `static final`，key 不会被 GC 清掉，但 value 忘了 `remove()`：
+
+```java
+private static final ThreadLocal<UserContext> CTX = new ThreadLocal<>();
+
+void handle(Request req) {
+    CTX.set(req.userContext());
+    // 忘了 CTX.remove()
+}
+```
+
+在线程池中，工作线程会被复用，线程自己的 `ThreadLocalMap` 也会继续存在。此时 entry 不是 stale entry：
+
+```text
+Entry
+  key   = CTX
+  value = 上一次请求的 UserContext
+```
+
+但它仍然可能是内存泄漏或上下文串用问题，因为请求已经结束，value 却还被长期存活的线程持有。
+
+归根到底，很多时候泄漏的重点不是 `ThreadLocal` key 本身，而是 value 的生命周期被线程拉长了。
+
 所以，弱引用 key 只能做到：
 
 - 不让“已经没人引用的 `ThreadLocal` 对象”被永久保活
@@ -162,8 +200,9 @@ Entry
 但它做不到：
 
 - 在 key 消失的瞬间，自动无条件释放对应的 value
+- 在 `static final ThreadLocal` 场景下，替你判断某个 value 的业务作用域已经结束
 
-这就是很多 `ThreadLocal` 内存泄漏问题的根源。
+这就是为什么 `ThreadLocal` 的弱引用设计不能替代 `remove()`。
 
 ---
 

@@ -155,7 +155,66 @@ if ("sayHello".equals(method.getName())) {
 
 ---
 
-## 5. 和 `invokedynamic` 的区别
+## 5. 为什么 JDK Proxy 只能代理接口
+
+从生成类的形态看，JDK Proxy 生成的是“实现接口的代理类”，而不是“继承目标类的子类”：
+
+```java
+public final class $Proxy0 extends Proxy implements IHello {
+    // ...
+}
+```
+
+因此代理对象可以被当成接口使用：
+
+```java
+IHello proxy = (IHello) Proxy.newProxyInstance(
+        loader,
+        new Class<?>[] { IHello.class },
+        handler);
+```
+
+因为 `$Proxy0 implements IHello`，所以它满足 `proxy instanceof IHello`。
+
+如果要代理一个普通类：
+
+```java
+class Hello {
+    public void sayHello() {
+    }
+}
+```
+
+代理对象就必须满足 `proxy instanceof Hello`。这意味着代理类需要继承目标类：
+
+```java
+class $Proxy0 extends Hello {
+    @Override
+    public void sayHello() {
+        // 拦截调用
+    }
+}
+```
+
+这不是 JDK Proxy 的设计。JDK Proxy 的生成类已经继承了 `java.lang.reflect.Proxy`，而 Java 只有单继承，不能同时 `extends Proxy` 又 `extends Hello`。
+
+接口代理还有一个实现上的好处：接口只定义方法契约，没有构造器和实例字段。JDK 只需要生成一个实现接口的转发类，把所有接口方法调用统一交给 `InvocationHandler.invoke(...)` 即可。
+
+如果要代理普通类，通常要走 CGLIB、Byte Buddy、Javassist 或 ASM 这一类字节码生成路线：生成目标类的子类，重写可重写的方法，并在重写方法里织入拦截逻辑。这类代理也有边界，例如 `final` 类、`final` 方法、`private` 方法和 `static` 方法都不能靠子类重写来拦截。
+
+所以更准确的说法是：
+
+```text
+JDK Proxy 的使用模型是：运行时生成实现接口的代理类，接口方法进入 InvocationHandler；
+InvocationHandler 里常见的 method.invoke(target, args) 是反射调用目标对象。
+
+ASM、Byte Buddy、CGLIB 这一类工具的核心是：直接生成或修改字节码；
+其中 CGLIB、Byte Buddy 常用于生成目标类的子类代理。
+```
+
+---
+
+## 6. 和 `invokedynamic` 的区别
 
 JDK 动态代理主要依赖运行时生成 class，再通过普通方法调用进入 `$Proxy0`，最后由 `$Proxy0` 调用 `InvocationHandler.invoke(...)`。它不是 `invokedynamic` 机制。
 

@@ -109,6 +109,8 @@ nav:
   - JDK:
       - Overview: jdk/index.md
       - Array Basics: jdk/content/array-basics.md
+      - String、coder 与 Compact Strings: jdk/content/string-compact-strings.md
+      - 字符串拼接与 invokedynamic: jdk/content/string-concat-invokedynamic.md
       - HashMap: jdk/content/hashmap.md
   - NIO:
       - Overview: nio/index.md
