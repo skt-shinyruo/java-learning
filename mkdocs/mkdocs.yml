@@ -106,6 +106,7 @@ nav:
   - Algorithm:
       - Overview: algorithm/index.md
       - 汉诺塔：递归与手动模拟函数调用栈: algorithm/content/hanoi-recursion-stack.md
+      - 外部排序：分块排序与多路归并: algorithm/content/external-sort-demo.md
   - JDK:
       - Overview: jdk/index.md
       - Array Basics: jdk/content/array-basics.md
