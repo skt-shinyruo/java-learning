@@ -21,8 +21,7 @@ public class LruCache<K, V> {
 
     private final int capacity;
     private final Map<K, Node<K, V>> entries;
-    private Node<K, V> head;
-    private Node<K, V> tail;
+    private final Node<K, V> dummyHead;
 
     public LruCache(int capacity) {
         if (capacity <= 0) {
@@ -30,6 +29,9 @@ public class LruCache<K, V> {
         }
         this.capacity = capacity;
         this.entries = new HashMap<K, Node<K, V>>();
+        this.dummyHead = new Node<K, V>(null, null);
+        this.dummyHead.before = this.dummyHead;
+        this.dummyHead.after = this.dummyHead;
     }
 
     public int capacity() {
@@ -54,7 +56,7 @@ public class LruCache<K, V> {
             return null;
         }
 
-        moveToTail(node);
+        moveToHead(node);
         return node.value;
     }
 
@@ -63,16 +65,16 @@ public class LruCache<K, V> {
         if (node != null) {
             V oldValue = node.value;
             node.value = value;
-            moveToTail(node);
+            moveToHead(node);
             return oldValue;
         }
 
         Node<K, V> newNode = new Node<K, V>(key, value);
         entries.put(key, newNode);
-        linkLast(newNode);
+        linkFirst(newNode);
 
         if (entries.size() > capacity) {
-            evictHead();
+            evictTail();
         }
         return null;
     }
@@ -89,23 +91,33 @@ public class LruCache<K, V> {
 
     public void clear() {
         entries.clear();
-        head = null;
-        tail = null;
+        dummyHead.before = dummyHead;
+        dummyHead.after = dummyHead;
     }
 
     public List<K> keysFromLeastToMostRecentlyUsed() {
         List<K> keys = new ArrayList<K>(entries.size());
-        Node<K, V> node = head;
-        while (node != null) {
+        Node<K, V> node = dummyHead.before;
+        while (node != dummyHead) {
+            keys.add(node.key);
+            node = node.before;
+        }
+        return keys;
+    }
+
+    public List<K> keysFromMostToLeastRecentlyUsed() {
+        List<K> keys = new ArrayList<K>(entries.size());
+        Node<K, V> node = dummyHead.after;
+        while (node != dummyHead) {
             keys.add(node.key);
             node = node.after;
         }
         return keys;
     }
 
-    private void evictHead() {
-        Node<K, V> eldest = head;
-        if (eldest == null) {
+    private void evictTail() {
+        Node<K, V> eldest = dummyHead.before;
+        if (eldest == dummyHead) {
             return;
         }
 
@@ -113,42 +125,26 @@ public class LruCache<K, V> {
         unlink(eldest);
     }
 
-    private void moveToTail(Node<K, V> node) {
-        if (node == tail) {
+    private void moveToHead(Node<K, V> node) {
+        if (node.before == dummyHead) {
             return;
         }
 
         unlink(node);
-        linkLast(node);
+        linkFirst(node);
     }
 
-    private void linkLast(Node<K, V> node) {
-        Node<K, V> oldTail = tail;
-        tail = node;
-
-        if (oldTail == null) {
-            head = node;
-        } else {
-            node.before = oldTail;
-            oldTail.after = node;
-        }
+    private void linkFirst(Node<K, V> node) {
+        Node<K, V> oldHead = dummyHead.after;
+        node.before = dummyHead;
+        node.after = oldHead;
+        dummyHead.after = node;
+        oldHead.before = node;
     }
 
     private void unlink(Node<K, V> node) {
-        Node<K, V> before = node.before;
-        Node<K, V> after = node.after;
-
-        if (before == null) {
-            head = after;
-        } else {
-            before.after = after;
-        }
-
-        if (after == null) {
-            tail = before;
-        } else {
-            after.before = before;
-        }
+        node.before.after = node.after;
+        node.after.before = node.before;
 
         node.before = null;
         node.after = null;

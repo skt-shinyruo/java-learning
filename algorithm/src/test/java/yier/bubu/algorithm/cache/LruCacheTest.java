@@ -35,6 +35,22 @@ public class LruCacheTest {
     }
 
     @Test
+    public void keysFromMostToLeastRecentlyUsed_shouldExposeHeadToTailOrder() {
+        LruCache<String, Integer> cache = new LruCache<String, Integer>(3);
+        cache.put("A", 1);
+        cache.put("B", 2);
+        cache.put("C", 3);
+
+        Assert.assertEquals(Arrays.asList("C", "B", "A"), cache.keysFromMostToLeastRecentlyUsed());
+
+        cache.get("A");
+        cache.put("D", 4);
+
+        Assert.assertFalse(cache.containsKey("B"));
+        Assert.assertEquals(Arrays.asList("D", "A", "C"), cache.keysFromMostToLeastRecentlyUsed());
+    }
+
+    @Test
     public void put_shouldUpdateExistingEntryAndPromoteIt() {
         LruCache<String, Integer> cache = new LruCache<String, Integer>(2);
         cache.put("A", 1);
