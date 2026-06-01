@@ -115,6 +115,7 @@ nav:
       - HashMap: jdk/content/hashmap.md
   - NIO:
       - Overview: nio/index.md
+      - I/O 基础：同步、异步、阻塞、非阻塞: nio/content/io-sync-async-blocking-nonblocking.md
       - Direct Memory and Copy Paths: nio/content/nio-direct-memory.md
   - JVM:
       - Overview: jvm/index.md
