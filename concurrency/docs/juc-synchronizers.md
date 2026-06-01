@@ -6,7 +6,7 @@
 - `CyclicBarrier`
 - `Semaphore`
 
-对应代码位置：
+完整代码位置（下文只摘录必要源码）：
 
 - 示例类：`concurrency/src/main/java/yier/bubu/concurrency/JucSynchronizersDemo.java`
 - 单元测试：`concurrency/src/test/java/yier/bubu/concurrency/JucSynchronizersDemoTest.java`
@@ -53,6 +53,30 @@ latch.await();     // 等计数归零
 JucSynchronizersDemo.waitForWorkersWithCountDownLatch(4);
 ```
 
+关键源码摘录：
+
+```java
+AtomicInteger completedWorkers = new AtomicInteger(0);
+CountDownLatch done = new CountDownLatch(workers);
+ExecutorService executor = Executors.newFixedThreadPool(workers);
+try {
+    for (int i = 0; i < workers; i++) {
+        executor.execute(() -> {
+            try {
+                completedWorkers.incrementAndGet();
+            } finally {
+                done.countDown();
+            }
+        });
+    }
+
+    await(done, "Timed out waiting for CountDownLatch workers");
+    return completedWorkers.get();
+} finally {
+    shutdown(executor);
+}
+```
+
 这个示例启动 4 个工作任务，每个任务完成后调用一次 `countDown()`，主线程通过 `await()` 等待所有任务结束，最后返回完成数量。
 
 ### 2.1 适合场景
@@ -90,6 +114,40 @@ barrier.await(); // 当前线程到达屏障，等待其他线程
 
 ```java
 JucSynchronizersDemo.synchronizePhasesWithCyclicBarrier(3, 2);
+```
+
+关键源码摘录：
+
+```java
+AtomicInteger arrivals = new AtomicInteger(0);
+AtomicInteger completedPhases = new AtomicInteger(0);
+AtomicReference<Exception> failure = new AtomicReference<>();
+CountDownLatch done = new CountDownLatch(parties);
+CyclicBarrier barrier = new CyclicBarrier(parties, completedPhases::incrementAndGet);
+ExecutorService executor = Executors.newFixedThreadPool(parties);
+try {
+    for (int i = 0; i < parties; i++) {
+        executor.execute(() -> {
+            try {
+                for (int phase = 0; phase < phases; phase++) {
+                    arrivals.incrementAndGet();
+                    barrier.await(WAIT_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
+                }
+            } catch (Exception e) {
+                restoreInterruptIfNeeded(e);
+                failure.compareAndSet(null, e);
+            } finally {
+                done.countDown();
+            }
+        });
+    }
+
+    await(done, "Timed out waiting for CyclicBarrier workers");
+    rethrowIfFailed(failure, "CyclicBarrier demo failed");
+    return new PhasedRunResult(arrivals.get(), completedPhases.get());
+} finally {
+    shutdown(executor);
+}
 ```
 
 这个示例启动 3 个线程，执行 2 个阶段。每个线程每阶段到达一次屏障，所以总到达次数是 `3 * 2 = 6`；barrier action 每阶段执行一次，所以完成阶段数是 `2`。
@@ -133,6 +191,50 @@ try {
 
 ```java
 JucSynchronizersDemo.limitConcurrentAccessWithSemaphore(8, 2);
+```
+
+关键源码摘录：
+
+```java
+Semaphore semaphore = new Semaphore(permits);
+AtomicInteger active = new AtomicInteger(0);
+AtomicInteger maxConcurrent = new AtomicInteger(0);
+AtomicInteger completedTasks = new AtomicInteger(0);
+AtomicReference<Exception> failure = new AtomicReference<>();
+CountDownLatch start = new CountDownLatch(1);
+CountDownLatch done = new CountDownLatch(tasks);
+ExecutorService executor = Executors.newFixedThreadPool(tasks);
+try {
+    for (int i = 0; i < tasks; i++) {
+        executor.execute(() -> {
+            try {
+                start.await();
+                semaphore.acquire();
+                try {
+                    int current = active.incrementAndGet();
+                    updateMax(maxConcurrent, current);
+                    TimeUnit.MILLISECONDS.sleep(20);
+                    completedTasks.incrementAndGet();
+                } finally {
+                    active.decrementAndGet();
+                    semaphore.release();
+                }
+            } catch (Exception e) {
+                restoreInterruptIfNeeded(e);
+                failure.compareAndSet(null, e);
+            } finally {
+                done.countDown();
+            }
+        });
+    }
+
+    start.countDown();
+    await(done, "Timed out waiting for Semaphore tasks");
+    rethrowIfFailed(failure, "Semaphore demo failed");
+    return new SemaphoreRunResult(completedTasks.get(), maxConcurrent.get());
+} finally {
+    shutdown(executor);
+}
 ```
 
 这个示例启动 8 个任务，但信号量只有 2 个许可证，所以同一时间最多 2 个任务能进入受保护区域。方法返回任务完成数量和实际观察到的最大并发数。
