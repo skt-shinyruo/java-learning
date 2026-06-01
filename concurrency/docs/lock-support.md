@@ -5,6 +5,7 @@
 - `LockSupport` 到底是不是“锁”
 - `park/unpark` 背后的 permit 模型是什么
 - permit 在 HotSpot 里到底存放在哪里
+- JVM 为什么要提供这套阻塞 / 唤醒原语
 - 为什么 `unpark` 可以先于 `park`
 - 为什么 `park()` 返回并不代表条件一定成立
 - 它和 `wait/notify`、`Condition.await/signal`、AQS 的关系
@@ -101,7 +102,7 @@ LockSupport.unpark(t);
 一句话记忆：
 
 - `LockSupport` 不是信号量计数器
-- 它更像是“每线程最多只保留 1 张通行证”
+- 它是“每线程最多只保留 1 个 `0/1` permit 状态”
 
 ## 3. 常用 API
 
@@ -152,6 +153,16 @@ LockSupport.park(this);
 - 本节说的是 **HotSpot + 普通平台线程**
 - 当前 OpenJDK 里的**虚拟线程**已经走 `parkVirtualThread` / `unparkVirtualThread` 这条单独路径
 - 所以下面的 `Parker` / `PlatformParker` 说明，不要直接套到虚拟线程实现上
+
+先直接回答实现位置：
+
+- `LockSupport` 是 Java 层 API，它本身不执行 native 阻塞
+- `Unsafe.park/unpark` 是 Java 代码进入 JVM native 层的入口
+- `Unsafe_Park/Unsafe_Unpark`、`Parker::park/unpark` 属于 HotSpot 的 C++ 实现
+- 在 POSIX/Linux 平台上，`Parker` 再通过 `pthread_mutex_t` / `pthread_cond_t` 完成线程等待和唤醒
+- `Parker` 不是 Java 类，也不是 JVM 规范要求的公共概念；它是 HotSpot 内部给普通平台线程实现 `park/unpark` 的 native 对象
+
+所以如果把“JVM 内核”理解成 HotSpot VM runtime/native 层，那么可以说 `Parker` 在 JVM 内部；但更准确的说法是：`Parker` 是 HotSpot 这个 JVM 实现里的内部 C++ 结构，其他 JVM 可以用不同结构实现同样的 Java 语义。
 
 ### 4.1 从 `LockSupport` 到 `Parker` 的调用链
 
@@ -209,7 +220,7 @@ Parker* parker() { return &_parker; }
 这几个字段的职责分别是：
 
 - `_counter`
-  这就是 permit 的实际槽位。可以把它理解成“当前线程是不是有一张未消费的通行证”。
+  这就是 permit 的实际槽位，表示当前线程是否还有一个未消费的 `0/1` permit 状态。
 - `_mutex`
   保护慢路径上的状态变更，避免 `park` 和 `unpark` 并发交错时把 `_counter` 和 `_cur_index` 搞乱。
 - `_cond[2]`
@@ -500,6 +511,62 @@ while (!ready) {
 
 `LockSupport` 最经典的使用场景，就是 AQS 这一层。
 
+从 JVM 设计角度看，`park/unpark` 解决的是 JUC 同步器的分工问题：
+
+- Java 层同步器负责共享状态、等待队列和竞争协议，例如 `volatile state`、CAS、`head/tail/waitStatus`
+- JVM/native 层负责把线程真正阻塞，并在需要时恢复指定线程
+- OS 层负责具体的线程调度、条件变量等待或平台事件等待
+
+如果没有 `park/unpark`，AQS 这类同步器只剩下两类不合适的选择。
+
+第一类是自旋等待：
+
+```text
+while (!tryAcquire()) {
+    // 一直占用 CPU
+}
+```
+
+这会浪费 CPU，等待时间稍长就不可接受。
+
+第二类是直接使用 `wait/notify`。它也不适合 AQS：
+
+- `wait/notify` 必须依赖某个对象 monitor
+- `wait()` 必须在 `synchronized` 内部调用，并且会释放对应 monitor
+- `notify()` 不能精确指定要唤醒哪个线程
+- `notify` 先发生、`wait` 后发生时，通知可能丢失
+- AQS 的锁状态不是 JVM monitor，而是 Java 层的 `volatile state + CAS + 队列`
+
+所以 AQS 需要的是更底层、更小的一块能力：
+
+```text
+Java 层自己维护同步状态和等待队列；
+JVM 只提供“阻塞当前线程”和“恢复指定线程”的原语。
+```
+
+这也是 `LockSupport` 存在的核心原因。
+
+最关键的竞态窗口是：
+
+```text
+线程 B 已经进入 AQS 队列，准备 park
+线程 A 正好 unlock，并 unpark(B)
+```
+
+如果这次恢复请求没有状态记录，而 B 还没真正睡下去，那么 B 后面再执行 `park()` 时就可能长期阻塞。HotSpot 的 `Parker._counter` 就是在这个窗口里保存一个 `0/1` permit 状态：
+
+```text
+unpark(B):
+    B 对应的 Parker._counter = 1
+
+B 后面执行 park:
+    发现 _counter == 1
+    把 _counter 清成 0
+    直接返回，不进入 OS 等待
+```
+
+因此，JVM 实现这套逻辑的目标不是替 Java 层完成“加锁”，而是给 Java 层同步器提供一个可靠的线程级阻塞 / 唤醒底座。
+
 你可以先把这条链记住：
 
 - `volatile/CAS` 管共享状态
@@ -568,7 +635,7 @@ LockSupport.unpark(threads[1]);
 LockSupport.unpark(threads[0]); // 启动 A
 ```
 
-这一步就是先给 A 发一张 permit，让整个链条跑起来。
+这一步就是先把 A 对应的 permit 状态设为 `1`，让整个链条跑起来。
 
 ## 10. 常见误区
 

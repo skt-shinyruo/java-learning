@@ -15,6 +15,8 @@
 
 如果你想专门看 `wait/notify/notifyAll` 的时序图、`wait set`、`AbcPrinters` 示例和常见误区，可以再结合阅读 [wait-notify.md](./wait-notify.md)。
 
+如果你想把 `synchronized`、HotSpot `ObjectMonitor`、`ReentrantLock`、AQS 和 `LockSupport` 放在同一张底层对比图里看，可以继续读 [synchronized-reentrantlock-internals.md](./synchronized-reentrantlock-internals.md)。
+
 ---
 
 ## 1. `synchronized` 的三种常见写法
@@ -534,6 +536,19 @@ Mark Word 是 HotSpot 对象头中的一部分，用来保存对象的运行时�
 
 这就是很多老资料里“Mark Word 指针切换”的来源。
 
+在 Java 8 / HotSpot 的经典语境下，可以把 `synchronized` 的状态演进粗略记成：
+
+```text
+无锁 -> 偏向锁 -> 轻量级锁 -> 重量级锁
+```
+
+但这不是 Java 语言规范承诺的固定链条，也不是每个对象都会完整走一遍。它只是 HotSpot 为了降低 `synchronized` 成本做的一组运行时优化：
+
+- **无锁**：对象头保存普通 Mark Word，例如 hash、年龄等信息，还没有线程占用它。
+- **偏向锁**：适合“几乎总是同一个线程反复进入”的场景。第一次进入时，对象头会记录偏向线程；同一线程后续再次进入时，尽量不再做 CAS。JDK 8 中偏向锁默认开启，但通常有启动延迟，可以通过 `-XX:BiasedLockingStartupDelay=0` 调整，或通过 `-XX:-UseBiasedLocking` 关闭。
+- **轻量级锁**：一旦出现其他线程竞争，偏向锁可能被撤销，进入 thin lock / stack lock 路径。HotSpot 会使用当前线程栈帧里的 lock record 保存原对象头，并通过 CAS 尝试把对象头改成指向该 lock record 的地址。
+- **重量级锁**：如果竞争继续加剧，或者遇到 `wait()` 等必须使用 monitor 的场景，锁会膨胀为 `ObjectMonitor`。这时会有真正的阻塞、唤醒、等待队列和 wait set 管理，开销也最大。
+
 #### 4.2.1 lock record（栈锁记录）是什么（以及为什么它不只是“标记”）
 
 在经典 JDK 8 语境里，“轻量级锁（thin lock / stack lock）”会在**当前线程的栈帧里**放一个锁记录（常被称为 *lock record* / *monitor record* / *stack lock*；在 HotSpot 源码里对应 `BasicLock` / `BasicObjectLock` 这类结构）。
@@ -581,6 +596,40 @@ CAS(obj.markWord, expected=record.displaced, new=ptr(record)|THIN_TAG)
 
 - 线程 B 看到对象头指向“别的线程栈上的 lock record”时，B 不会去“读取/复用那条记录”来完成阻塞。
 - 常见策略是先短自旋；自旋失败、或遇到 `wait()`/JNI monitor 等必须走 monitor 的场景，就会膨胀成 `ObjectMonitor`，由它来维护 owner、重入次数、队列与唤醒。
+
+#### 4.2.3 lock record 为什么能放在栈帧里
+
+这里有一个常见疑问：
+
+> Java 字节码里的栈帧大小不是编译后就固定了吗？还能临时添加 lock record 吗？
+
+关键是区分两层“栈帧”：
+
+```text
+JVM 规范 / class 文件层面：
+  Java 栈帧需要的局部变量表 max_locals
+  Java 操作数栈最大深度 max_stack
+
+HotSpot 实现层面：
+  真实机器栈帧 / 解释器栈帧
+    = 局部变量表
+    + 操作数栈
+    + 返回地址
+    + 保存寄存器
+    + 方法元数据
+    + monitor / lock record 区域
+    + JIT spill slot 等 VM 内部空间
+```
+
+`max_stack` 和 `max_locals` 固定的是 Java 代码可见的操作数栈和局部变量表容量；它们不等于 HotSpot 真实栈帧里只能有这些内容。
+
+当 HotSpot 解释执行或 JIT 编译一个带有 `monitorenter` / `monitorexit`，或者带有 `ACC_SYNCHRONIZED` 标志的方法时，它会在自己的栈帧布局里为 monitor / lock record 预留实现空间。运行到 `monitorenter` 时，HotSpot 只是使用这块 VM 内部空间，不是在已经固定的 Java 操作数栈上临时硬塞一个新槽位。
+
+所以更准确的说法是：
+
+- Java 编译器固定的是 `max_stack` / `max_locals` 这些字节码验证和执行语义所需的信息。
+- HotSpot 可以在真实线程栈帧中放置 JVM 自己需要的运行时账本。
+- lock record 属于 HotSpot 的实现细节，不属于 Java 语言层面的局部变量表或操作数栈。
 
 ---
 

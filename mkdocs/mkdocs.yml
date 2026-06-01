@@ -83,9 +83,11 @@ nav:
       - Non-volatile Stop Flag and -Xint: concurrency/content/non-volatile-stop-flag-and-xint.md
       - CAS Notes: concurrency/content/cas-notes.md
       - Synchronized Notes: concurrency/content/synchronized-notes.md
+      - Synchronized vs ReentrantLock Internals: concurrency/content/synchronized-reentrantlock-internals.md
       - Thread States: concurrency/content/thread-states.md
       - Wait / Notify: concurrency/content/wait-notify.md
       - LockSupport: concurrency/content/lock-support.md
+      - CountDownLatch / CyclicBarrier / Semaphore: concurrency/content/juc-synchronizers.md
       - ThreadLocal: concurrency/content/thread-local.md
       - Virtual Threads: concurrency/content/virtual-threads.md
       - JMM References:
@@ -116,7 +118,7 @@ nav:
   - NIO:
       - Overview: nio/index.md
       - I/O 基础：同步、异步、阻塞、非阻塞: nio/content/io-sync-async-blocking-nonblocking.md
-      - Direct Memory and Copy Paths: nio/content/nio-direct-memory.md
+      - Zero Copy：复制路径和常见类型: nio/content/nio-direct-memory.md
   - JVM:
       - Overview: jvm/index.md
       - JVM Memory: jvm/content/jvm-memory.md
