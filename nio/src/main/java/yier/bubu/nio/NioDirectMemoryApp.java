@@ -18,6 +18,11 @@ public final class NioDirectMemoryApp {
             runMmapDemo();
             return;
         }
+        if ("echo".equals(command)) {
+            String[] rest = withoutCommand(args);
+            EchoIoModelDemo.main(rest);
+            return;
+        }
         printHelp();
     }
 
@@ -47,6 +52,8 @@ public final class NioDirectMemoryApp {
         System.out.println("Commands:");
         System.out.println("  copy-path [capacity]  Compare heap and direct ByteBuffer copy paths");
         System.out.println("  mmap                  Write/read a temp file with MappedByteBuffer");
+        System.out.println("  echo [mode]           Run echo I/O model demo");
+        System.out.println("                         modes: sync-blocking, sync-nonblocking, async-blocking, async-nonblocking");
         System.out.println("  help                  Show this help");
     }
 }

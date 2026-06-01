@@ -96,11 +96,41 @@ if (n == 0) {
 - 异步阻塞：取号后本来可以离开，但你又坐在原地死等叫号。
 - 异步非阻塞：取号后去做别的，叫到号再回来处理。
 
-## 5. Java 语境下的一个注意点
+## 5. 可运行的 echo server/client 示例
+
+`nio` 模块提供了一个完整的本机 echo server/client 示例，用真实 I/O 帮助观察这四种组合。
+
+先编译：
+
+```bash
+mvn -pl nio -DskipTests package
+```
+
+然后分别运行：
+
+```bash
+java -cp nio/target/classes yier.bubu.nio.NioDirectMemoryApp echo sync-blocking
+java -cp nio/target/classes yier.bubu.nio.NioDirectMemoryApp echo sync-nonblocking
+java -cp nio/target/classes yier.bubu.nio.NioDirectMemoryApp echo async-blocking
+java -cp nio/target/classes yier.bubu.nio.NioDirectMemoryApp echo async-nonblocking
+```
+
+四个命令都会启动本机 loopback echo server/client，发送 `ping`，再读取同样的 `ping` 响应。区别在于客户端等待结果的方式：
+
+- `sync-blocking`：用 `Socket`，客户端在 `read()` 上等待服务端 echo。
+- `sync-nonblocking`：用 `SocketChannel` + `Selector`，客户端通过就绪事件推进连接、写入和读取。
+- `async-blocking`：用 `AsynchronousSocketChannel`，但客户端调用 `Future.get()` 等结果。
+- `async-nonblocking`：用 `AsynchronousSocketChannel` + `CompletionHandler`，结果通过回调回来。
+
+相关代码：
+
+- `nio/src/main/java/yier/bubu/nio/EchoIoModelDemo.java`
+- `nio/src/test/java/yier/bubu/nio/EchoIoModelDemoTest.java`
+
+## 6. Java 语境下的一个注意点
 
 日常说“线程被阻塞”是泛称，意思是线程因为等待 I/O、锁、条件、时间等原因不能继续执行当前逻辑。
 
 但 `Thread.State.BLOCKED` 是 Java 线程状态里的一个具体状态，主要表示线程正在等待进入 `synchronized` 关联的 monitor 锁。很多“阻塞式等待”在 Java 线程状态里可能表现为 `WAITING`、`TIMED_WAITING`，甚至在底层 I/O 等待时仍显示为 `RUNNABLE`。
 
 因此讨论 I/O 模型时，不要把“阻塞调用”和 `Thread.State.BLOCKED` 简单画等号。
-
