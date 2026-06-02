@@ -311,6 +311,142 @@ AppClassLoader.loadClass("com.mysql.cj.jdbc.Driver")
 
 所以关键点不是父加载器真的直接调用了某个子加载器变量，而是父层基础代码通过当前线程暴露出来的上下文类加载器，获得了一个能看见应用类路径的加载器。
 
+### 5.1 上下文类加载器从哪里来
+
+在 JDK 8 的普通 Java 应用中，JDK 启动器会创建应用类加载器，也就是 `AppClassLoader`。主线程启动后，线程上下文类加载器通常会被设置为这个应用类加载器：
+
+```text
+main Thread
+  -> contextClassLoader = AppClassLoader
+```
+
+因此应用里直接打印当前线程上下文类加载器，通常会看到类似 `sun.misc.Launcher$AppClassLoader` 的结果：
+
+```java
+ClassLoader loader = Thread.currentThread().getContextClassLoader();
+System.out.println(loader);
+```
+
+后续创建的新线程如果没有显式设置上下文类加载器，通常会从父线程继承这个值。也就是说，线程上下文类加载器不是从 `BootstrapClassLoader` 的父子关系里推导出来的，而是当前线程对象上保存的一个 `ClassLoader` 引用。
+
+这也是 JDBC SPI 例子里最容易误解的地方：不是 `BootstrapClassLoader` 沿着类加载器树反向找到了 `AppClassLoader`，而是 `DriverManager` 这类 JDK 基础代码运行时调用：
+
+```java
+Thread.currentThread().getContextClassLoader();
+```
+
+然后从当前线程对象上拿到了 `AppClassLoader`。
+
+如果 `DriverManager` 只使用自己的定义类加载器，在 JDK 8 中可以粗略理解为：
+
+```java
+ClassLoader loader = DriverManager.class.getClassLoader();
+```
+
+结果会接近：
+
+```text
+null
+```
+
+`null` 表示启动类加载器。启动类加载器看不到应用 ClassPath 下的 MySQL 驱动 jar，因此不能靠它完成 JDBC 驱动发现。
+
+### 5.2 JDBC SPI 的完整链路
+
+以 JDBC 4 之后常见的自动发现驱动为例，整体过程可以按下面的链路理解：
+
+```text
+1. JVM 启动应用
+   -> 创建 BootstrapClassLoader
+   -> 创建 ExtClassLoader
+   -> 创建 AppClassLoader
+
+2. JDK 启动器设置主线程上下文类加载器
+   Thread.contextClassLoader = AppClassLoader
+
+3. 应用调用
+   DriverManager.getConnection(...)
+
+4. DriverManager 由 JDK 提供
+   -> 在 JDK 8 中由 BootstrapClassLoader 加载
+
+5. DriverManager 初始化 JDBC 驱动
+   -> 调用 ServiceLoader.load(java.sql.Driver.class)
+
+6. ServiceLoader.load(Driver.class)
+   -> 读取 Thread.currentThread().getContextClassLoader()
+   -> 得到 AppClassLoader
+
+7. ServiceLoader 用 AppClassLoader 查找服务配置
+   -> META-INF/services/java.sql.Driver
+
+8. MySQL 驱动 jar 中的服务配置声明实现类
+   -> com.mysql.cj.jdbc.Driver
+
+9. AppClassLoader 加载 com.mysql.cj.jdbc.Driver
+
+10. 驱动类初始化或实例化过程中注册到 DriverManager
+    -> DriverManager.registerDriver(...)
+
+11. DriverManager.getConnection(...) 遍历已注册驱动
+    -> 找到能处理 jdbc:mysql: URL 的 MySQL Driver
+    -> 创建并返回 Connection
+```
+
+这个过程里的关键组合是：
+
+```text
+DriverManager 是基础代码
+  -> 但不使用自己的定义类加载器去找驱动
+  -> 而是通过 ServiceLoader 使用当前线程上下文类加载器
+  -> 当前线程上下文类加载器通常是 AppClassLoader
+  -> 因而可以看到应用依赖里的 JDBC 驱动实现
+```
+
+所以更准确的说法是：
+
+```text
+不是 BootstrapClassLoader 走到了 AppClassLoader；
+而是 Bootstrap 加载的 JDK 代码，从当前线程上取出了 AppClassLoader 这个引用。
+```
+
+### 5.3 这个过程仍然哪里遵守双亲委派
+
+线程上下文类加载器并不是让整个类加载过程完全绕开双亲委派。它解决的是“最开始应该拿哪个类加载器去发现应用实现”的问题。
+
+当 `ServiceLoader` 拿到 `AppClassLoader` 后，再请求它加载 MySQL 驱动类：
+
+```text
+AppClassLoader.loadClass("com.mysql.cj.jdbc.Driver")
+```
+
+`AppClassLoader` 自己的加载流程仍然会先委派给父加载器：
+
+```text
+AppClassLoader 收到加载请求
+  -> 先问 ExtClassLoader
+  -> 再问 BootstrapClassLoader
+  -> 父加载器找不到 com.mysql.cj.jdbc.Driver
+  -> AppClassLoader 再从应用 ClassPath 的 MySQL jar 中加载
+```
+
+MySQL 驱动类实现的是 JDK 中的接口：
+
+```java
+public class Driver implements java.sql.Driver {
+}
+```
+
+这里的 `java.sql.Driver` 由上层加载器加载，`com.mysql.cj.jdbc.Driver` 由应用加载器加载。这是合法的，因为子加载器能够看见父加载器加载的类型。最终类型关系可以理解为：
+
+```text
+java.sql.Driver             -> BootstrapClassLoader
+java.sql.DriverManager      -> BootstrapClassLoader
+com.mysql.cj.jdbc.Driver    -> AppClassLoader
+```
+
+所以 SPI 场景不是简单地“破坏所有双亲委派”，而是借线程上下文类加载器完成一次反向入口选择：父层基础代码先拿到应用侧加载器，再让应用侧加载器按自己的正常加载规则去加载实现类。
+
 ---
 
 ## 6. 插件模型和 SPI 的关系
