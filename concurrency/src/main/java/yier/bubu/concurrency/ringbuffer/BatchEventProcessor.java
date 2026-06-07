@@ -10,6 +10,7 @@ public final class BatchEventProcessor<T> implements Runnable {
     private final ExceptionHandler<? super T> exceptionHandler;
     private final Sequence sequence = new Sequence(-1L);
     private final AtomicBoolean running = new AtomicBoolean(false);
+    private final AtomicBoolean haltRequested = new AtomicBoolean(false);
 
     private volatile Thread thread;
 
@@ -27,6 +28,7 @@ public final class BatchEventProcessor<T> implements Runnable {
         if (!running.compareAndSet(false, true)) {
             throw new IllegalStateException("BatchEventProcessor is already running");
         }
+        haltRequested.set(false);
         sequenceBarrier.clearAlert();
         Thread processorThread = new Thread(this, "batch-event-processor");
         thread = processorThread;
@@ -34,7 +36,7 @@ public final class BatchEventProcessor<T> implements Runnable {
     }
 
     public void halt() {
-        running.set(false);
+        haltRequested.set(true);
         sequenceBarrier.alert();
         Thread processorThread = thread;
         if (processorThread != null) {
@@ -54,9 +56,9 @@ public final class BatchEventProcessor<T> implements Runnable {
     public void run() {
         long nextSequence = sequence.get() + 1L;
         try {
-            while (running.get()) {
+            while (!haltRequested.get()) {
                 long availableSequence = sequenceBarrier.waitFor(nextSequence);
-                while (nextSequence <= availableSequence && running.get()) {
+                while (nextSequence <= availableSequence && !haltRequested.get()) {
                     T event = ringBuffer.get(nextSequence);
                     try {
                         eventHandler.onEvent(event, nextSequence);
@@ -70,11 +72,17 @@ public final class BatchEventProcessor<T> implements Runnable {
                 }
             }
         } catch (AlertException exception) {
+            if (!haltRequested.get()) {
+                throw new IllegalStateException("Unexpected alert", exception);
+            }
         } catch (InterruptedException exception) {
-            Thread.currentThread().interrupt();
+            if (!haltRequested.get()) {
+                Thread.currentThread().interrupt();
+            }
         } finally {
             thread = null;
             running.set(false);
+            haltRequested.set(false);
         }
     }
 }

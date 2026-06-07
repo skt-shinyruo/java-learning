@@ -59,7 +59,7 @@ public class WaitStrategyAndProcessorTest {
     public void batchEventProcessor_halt_shouldNotDrainAlreadyAvailableBatch() throws Exception {
         RingBuffer<TestEvent> ringBuffer =
                 RingBuffer.createSingleProducer(new TestEventFactory(), 8, new BlockingWaitStrategy());
-        HaltingHandler handler = new HaltingHandler();
+        BlockingHaltingHandler handler = new BlockingHaltingHandler();
         BatchEventProcessor<TestEvent> processor =
                 new BatchEventProcessor<TestEvent>(
                         ringBuffer,
@@ -75,11 +75,45 @@ public class WaitStrategyAndProcessorTest {
 
         processor.start();
 
-        Assert.assertTrue(handler.awaitFirstEvent(1L, TimeUnit.SECONDS));
+        Assert.assertTrue(handler.awaitHaltCalled(1L, TimeUnit.SECONDS));
+        Assert.assertTrue(processor.isRunning());
+        handler.releaseHandler();
         Assert.assertTrue(awaitStopped(processor, 1L, TimeUnit.SECONDS));
         Assert.assertEquals(Arrays.asList(1), handler.values());
         Assert.assertEquals(0L, processor.getSequence().get());
         Assert.assertFalse(processor.isRunning());
+    }
+
+    @Test
+    public void batchEventProcessor_start_shouldRejectWhilePreviousThreadIsStillUnwinding() throws Exception {
+        RingBuffer<TestEvent> ringBuffer =
+                RingBuffer.createSingleProducer(new TestEventFactory(), 8, new BlockingWaitStrategy());
+        BlockingHaltingHandler handler = new BlockingHaltingHandler();
+        BatchEventProcessor<TestEvent> processor =
+                new BatchEventProcessor<TestEvent>(
+                        ringBuffer,
+                        ringBuffer.newBarrier(),
+                        handler,
+                        new LoggingExceptionHandler<TestEvent>());
+        handler.setProcessor(processor);
+        ringBuffer.addGatingSequences(processor.getSequence());
+
+        processor.start();
+        publishValue(ringBuffer, 1);
+
+        try {
+            Assert.assertTrue(handler.awaitHaltCalled(1L, TimeUnit.SECONDS));
+            Assert.assertTrue(processor.isRunning());
+            try {
+                processor.start();
+                Assert.fail("Expected IllegalStateException");
+            } catch (IllegalStateException expected) {
+                Assert.assertTrue(expected.getMessage().contains("running"));
+            }
+        } finally {
+            handler.releaseHandler();
+            Assert.assertTrue(awaitStopped(processor, 1L, TimeUnit.SECONDS));
+        }
     }
 
     private void assertBarrierCanObservePublishedSequence(WaitStrategy waitStrategy) throws Exception {
@@ -141,19 +175,22 @@ public class WaitStrategyAndProcessorTest {
         }
     }
 
-    private static final class HaltingHandler implements EventHandler<TestEvent> {
-        private final CountDownLatch firstEventLatch = new CountDownLatch(1);
+    private static final class BlockingHaltingHandler implements EventHandler<TestEvent> {
+        private final CountDownLatch haltCalledLatch = new CountDownLatch(1);
+        private final CountDownLatch releaseHandlerLatch = new CountDownLatch(1);
         private final List<Integer> values = new ArrayList<Integer>();
         private BatchEventProcessor<TestEvent> processor;
 
         @Override
-        public void onEvent(TestEvent event, long sequence) {
+        public void onEvent(TestEvent event, long sequence) throws InterruptedException {
             synchronized (values) {
                 values.add(event.value);
             }
             if (sequence == 0L) {
                 processor.halt();
-                firstEventLatch.countDown();
+                haltCalledLatch.countDown();
+                Thread.interrupted();
+                releaseHandlerLatch.await();
             }
         }
 
@@ -161,8 +198,12 @@ public class WaitStrategyAndProcessorTest {
             this.processor = processor;
         }
 
-        private boolean awaitFirstEvent(long timeout, TimeUnit unit) throws InterruptedException {
-            return firstEventLatch.await(timeout, unit);
+        private boolean awaitHaltCalled(long timeout, TimeUnit unit) throws InterruptedException {
+            return haltCalledLatch.await(timeout, unit);
+        }
+
+        private void releaseHandler() {
+            releaseHandlerLatch.countDown();
         }
 
         private List<Integer> values() {
