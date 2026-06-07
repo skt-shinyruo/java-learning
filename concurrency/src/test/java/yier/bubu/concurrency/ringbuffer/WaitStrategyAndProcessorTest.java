@@ -55,6 +55,33 @@ public class WaitStrategyAndProcessorTest {
         assertBarrierCanObservePublishedSequence(new SleepingWaitStrategy());
     }
 
+    @Test
+    public void batchEventProcessor_halt_shouldNotDrainAlreadyAvailableBatch() throws Exception {
+        RingBuffer<TestEvent> ringBuffer =
+                RingBuffer.createSingleProducer(new TestEventFactory(), 8, new BlockingWaitStrategy());
+        HaltingHandler handler = new HaltingHandler();
+        BatchEventProcessor<TestEvent> processor =
+                new BatchEventProcessor<TestEvent>(
+                        ringBuffer,
+                        ringBuffer.newBarrier(),
+                        handler,
+                        new LoggingExceptionHandler<TestEvent>());
+        handler.setProcessor(processor);
+        ringBuffer.addGatingSequences(processor.getSequence());
+
+        publishValue(ringBuffer, 1);
+        publishValue(ringBuffer, 2);
+        publishValue(ringBuffer, 3);
+
+        processor.start();
+
+        Assert.assertTrue(handler.awaitFirstEvent(1L, TimeUnit.SECONDS));
+        Assert.assertTrue(awaitStopped(processor, 1L, TimeUnit.SECONDS));
+        Assert.assertEquals(Arrays.asList(1), handler.values());
+        Assert.assertEquals(0L, processor.getSequence().get());
+        Assert.assertFalse(processor.isRunning());
+    }
+
     private void assertBarrierCanObservePublishedSequence(WaitStrategy waitStrategy) throws Exception {
         RingBuffer<TestEvent> ringBuffer =
                 RingBuffer.createSingleProducer(new TestEventFactory(), 4, waitStrategy);
@@ -75,6 +102,18 @@ public class WaitStrategyAndProcessorTest {
         });
     }
 
+    private boolean awaitStopped(BatchEventProcessor<TestEvent> processor, long timeout, TimeUnit unit)
+            throws InterruptedException {
+        long deadlineNanos = System.nanoTime() + unit.toNanos(timeout);
+        while (System.nanoTime() < deadlineNanos) {
+            if (!processor.isRunning()) {
+                return true;
+            }
+            Thread.sleep(10L);
+        }
+        return !processor.isRunning();
+    }
+
     private static final class RecordingHandler implements EventHandler<TestEvent> {
         private final CountDownLatch latch;
         private final List<Integer> values = new ArrayList<Integer>();
@@ -93,6 +132,37 @@ public class WaitStrategyAndProcessorTest {
 
         private boolean await(long timeout, TimeUnit unit) throws InterruptedException {
             return latch.await(timeout, unit);
+        }
+
+        private List<Integer> values() {
+            synchronized (values) {
+                return new ArrayList<Integer>(values);
+            }
+        }
+    }
+
+    private static final class HaltingHandler implements EventHandler<TestEvent> {
+        private final CountDownLatch firstEventLatch = new CountDownLatch(1);
+        private final List<Integer> values = new ArrayList<Integer>();
+        private BatchEventProcessor<TestEvent> processor;
+
+        @Override
+        public void onEvent(TestEvent event, long sequence) {
+            synchronized (values) {
+                values.add(event.value);
+            }
+            if (sequence == 0L) {
+                processor.halt();
+                firstEventLatch.countDown();
+            }
+        }
+
+        private void setProcessor(BatchEventProcessor<TestEvent> processor) {
+            this.processor = processor;
+        }
+
+        private boolean awaitFirstEvent(long timeout, TimeUnit unit) throws InterruptedException {
+            return firstEventLatch.await(timeout, unit);
         }
 
         private List<Integer> values() {

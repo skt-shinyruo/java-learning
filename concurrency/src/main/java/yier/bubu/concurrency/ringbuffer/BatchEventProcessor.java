@@ -36,6 +36,10 @@ public final class BatchEventProcessor<T> implements Runnable {
     public void halt() {
         running.set(false);
         sequenceBarrier.alert();
+        Thread processorThread = thread;
+        if (processorThread != null) {
+            processorThread.interrupt();
+        }
     }
 
     public boolean isRunning() {
@@ -52,7 +56,7 @@ public final class BatchEventProcessor<T> implements Runnable {
         try {
             while (running.get()) {
                 long availableSequence = sequenceBarrier.waitFor(nextSequence);
-                while (nextSequence <= availableSequence) {
+                while (nextSequence <= availableSequence && running.get()) {
                     T event = ringBuffer.get(nextSequence);
                     try {
                         eventHandler.onEvent(event, nextSequence);
