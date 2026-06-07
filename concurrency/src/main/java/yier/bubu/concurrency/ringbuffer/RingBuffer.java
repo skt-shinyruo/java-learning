@@ -27,6 +27,15 @@ public final class RingBuffer<T> {
                 new SingleProducerSequencer(bufferSize, waitStrategy));
     }
 
+    public static <T> RingBuffer<T> createMultiProducer(
+            EventFactory<T> eventFactory,
+            int bufferSize,
+            WaitStrategy waitStrategy) {
+        return new RingBuffer<T>(
+                Objects.requireNonNull(eventFactory, "eventFactory"),
+                new MultiProducerSequencer(bufferSize, waitStrategy));
+    }
+
     public int getBufferSize() {
         return sequencer.getBufferSize();
     }
