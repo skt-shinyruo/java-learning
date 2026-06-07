@@ -146,6 +146,7 @@ nav:
       - JDK 动态代理与 InvocationHandler: jvm/content/dynamic-proxy.md
       - MethodHandle 与 invokedynamic: jvm/content/method-handle-invokedynamic.md
       - GC:
+          - GC 类型概览: jvm/content/gc/gc-concepts.md
           - HotSpot OopMap 与 GC Roots: jvm/content/gc/oopmap-gc-roots.md
           - ZGC 收集器: jvm/content/gc/zgc.md
       - Java Object Layout（对象布局）: jvm/content/java-object-layout.md

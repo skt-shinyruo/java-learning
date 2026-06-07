@@ -19,6 +19,8 @@
 
 程序计数器（PC Register）是线程私有的运行时数据区。每个 Java 线程都有自己独立的一份 PC，用来记录当前线程正在执行的 JVM 字节码位置；如果当前线程正在执行 native 方法，PC 的值在规范层面是 undefined。
 
+这里的 PC 是 JVM 规范里的抽象概念，不等同于 CPU 硬件里的指令指针寄存器。它也不是 Java 堆里的对象，更不是存放在某个栈帧中的字段。具体到 HotSpot 这类 JVM 实现，PC 的状态通常由线程相关的运行时结构、解释器/JIT 执行上下文、机器码位置和调试/去优化元数据共同表达，具体存放方式由 JVM 实现决定。
+
 PC 不属于栈帧，字节码指令也不是存放在栈帧里。栈帧主要保存局部变量表、操作数栈、动态链接、方法返回信息等运行时状态；字节码指令来自当前方法的 `Code` 属性。更准确的说法是：
 
 ```text
@@ -58,7 +60,81 @@ PC 从被调用方法的 return 指令 -> 调用者中 invoke 后面的下一条
 
 ![HotSpot JDK 8+ JVM 进程内存](images/hotspot-process-memory.svg)
 
-方法区在 HotSpot JDK 8+ 中的落地关系：
+### 2.1 JVM 进程虚拟地址空间的用途分类
+
+下面这张文本图是按用途分类的学习视角，不表示真实地址空间里的先后顺序，也不表示每一类内存都必须是单独、连续的一整块区域：
+
+```text
+JVM 进程的虚拟地址空间，按用途分类，非真实顺序
+│
+├── Java Heap
+│   ├── 对象实例
+│   ├── 数组
+│   ├── String 对象
+│   └── Class 对象镜像
+│
+├── Class Metadata / Method Area 的 HotSpot 实现
+│   ├── Metaspace
+│   │   └── 类元信息、方法元信息、运行时常量池元数据等
+│   └── Compressed Class Space
+│       └── 压缩类指针相关的 Klass 信息
+│
+├── Thread Stacks
+│   └── 每个线程一个栈，受 -Xss 影响
+│
+├── Code Cache
+│   └── JIT 编译后的机器码
+│
+├── Direct Memory
+│   └── DirectByteBuffer / NIO / Netty 使用的堆外内存
+│
+├── Other JVM Native Memory
+│   └── GC、JNI、符号表、Arena、C heap 等
+│
+└── mmap / Shared Libraries
+    └── libjvm.so、libc、jar 映射文件等
+```
+
+这张图适合用来区分“Java 堆”和“堆外/本地内存”的主要来源；真实 HotSpot 进程的虚拟地址空间由多段映射组成，顺序、连续性和提交时机都取决于 JVM 实现、启动参数、GC、类加载情况、线程数量以及操作系统的虚拟内存管理。
+
+### 2.2 规范运行时数据区图和进程内存图的关系
+
+经典的“运行时数据区”图通常站在 JVM 规范视角，关注的是逻辑区域和线程共享关系：
+
+```text
+运行时数据区
+├── 线程共享
+│   ├── 方法区 Method Area
+│   └── 堆 Heap
+└── 线程私有
+    ├── 虚拟机栈 VM Stack
+    ├── 本地方法栈 Native Method Stack
+    └── 程序计数器 Program Counter Register
+```
+
+它回答的是“JVM 规范规定运行时应该有哪些逻辑区域，哪些线程共享，哪些线程私有”。前面的 HotSpot 进程内存图回答的是“一个真实 JVM 进程在操作系统里大概会占用哪些内存”。二者口径不同，所以看起来不完全一致，但并不矛盾。
+
+大致对应关系如下：
+
+| JVM 规范图里的概念 | HotSpot JDK 8+ 里的大致落地 |
+| --- | --- |
+| 堆 Heap | Java Heap，存对象、数组、`String` 对象、`Class` 对象镜像 |
+| 方法区 Method Area | 主要由 Metaspace / Compressed Class Space 承载类元数据 |
+| 运行时常量池 | 属于方法区的逻辑结构，相关元数据在 Metaspace 里 |
+| 虚拟机栈 VM Stack | 每个线程的栈，真实内存来自 native memory，受 `-Xss` 影响 |
+| 本地方法栈 Native Method Stack | native 调用相关栈空间，HotSpot 中通常和线程栈实现关系很近 |
+| 程序计数器 PC Register | 线程私有的执行位置概念，未必表现为一块独立内存区域 |
+
+因此可以这样记：
+
+```text
+规范运行时数据区图 = 逻辑模型
+HotSpot 进程内存图 = 实现和排查模型
+```
+
+方法区、虚拟机栈、程序计数器这些名称来自 JVM 规范；Heap、Metaspace、Thread Stacks、Code Cache、Direct Memory 更接近真实进程内存使用和排查时看到的分类。
+
+### 2.3 方法区在 HotSpot JDK 8+ 中的落地关系
 
 ![方法区在 HotSpot JDK 8+ 中的落地关系](images/method-area-hotspot.svg)
 
@@ -70,6 +146,10 @@ PC 从被调用方法的 return 指令 -> 调用者中 invoke 后面的下一条
 - **Direct Memory 不是方法区**，它也是本地内存的一部分。
 - **线程栈在规范里是 JVM 栈/本地方法栈，但实际内存来自 native memory。**
 - **Code Cache 存 JIT 后的机器码，不是 Java 堆，也通常不算元空间。**
+
+这里的 **native** 可以理解为“本机/宿主平台的”。放在内存语境里，native memory 主要是相对于 **Java heap / Java managed memory** 而言：Java 堆存放普通 Java 对象，由 JVM 的 GC 按对象模型管理；native memory 是同一个 JVM 进程向操作系统申请的用户态虚拟内存，不属于 Java 堆，也不会像普通 Java 对象一样由 GC 直接移动和管理。
+
+JDK 8 以后，类元信息主要放在 Metaspace。Metaspace 使用的就是这类本地内存，通常由 JVM 的 C/C++ 实现代码通过类似 `malloc`、`mmap` 或平台等价机制向操作系统申请。它不是内核内存，也不是另一个进程的内存，而是当前 JVM 进程虚拟地址空间的一部分。`java.lang.Class` 对象本身仍然在 Java 堆中，它关联到的类元数据主要在 Metaspace 中。
 
 一句话版：
 
