@@ -53,6 +53,10 @@ public final class RingBuffer<T> {
         sequencer.addGatingSequences(sequences);
     }
 
+    public boolean removeGatingSequence(Sequence sequence) {
+        return sequencer.removeGatingSequence(sequence);
+    }
+
     public SequenceBarrier newBarrier() {
         return sequencer.newBarrier();
     }

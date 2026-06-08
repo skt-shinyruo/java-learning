@@ -47,6 +47,34 @@ abstract class AbstractSequencer implements Sequencer {
     }
 
     @Override
+    public boolean removeGatingSequence(Sequence sequence) {
+        Objects.requireNonNull(sequence, "sequence");
+        synchronized (this) {
+            Sequence[] current = gatingSequences;
+            int removeIndex = -1;
+            for (int index = 0; index < current.length; index++) {
+                if (current[index] == sequence) {
+                    removeIndex = index;
+                    break;
+                }
+            }
+            if (removeIndex < 0) {
+                return false;
+            }
+            Sequence[] updated = new Sequence[current.length - 1];
+            System.arraycopy(current, 0, updated, 0, removeIndex);
+            System.arraycopy(
+                    current,
+                    removeIndex + 1,
+                    updated,
+                    removeIndex,
+                    current.length - removeIndex - 1);
+            gatingSequences = updated;
+            return true;
+        }
+    }
+
+    @Override
     public SequenceBarrier newBarrier() {
         return new ProcessingSequenceBarrier(this, waitStrategy, cursor, cursor);
     }

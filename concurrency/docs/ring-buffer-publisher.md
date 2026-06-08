@@ -426,11 +426,13 @@ try {
 - 直接抛出 `IllegalStateException`
 - 处理线程退出
 - 失败的 sequence 不会被推进
+- processor 的 sequence 会从 ring buffer 的 gating sequences 中移除
 
-测试 `fatalExceptionHandler_shouldStopProcessorWithoutAdvancingFailedSequence()` 证明了：
+测试 `fatalExceptionHandler_shouldStopProcessorAndReleaseProducerGating()` 证明了：
 
 - 处理 `0` 失败后 processor 停止
 - processor sequence 仍然停留在 `-1`
+- 后续生产者不会因为这个已终止 processor 永久背压
 
 这更接近 fail-fast：一旦业务处理逻辑异常，就让消费者停下来暴露问题。
 

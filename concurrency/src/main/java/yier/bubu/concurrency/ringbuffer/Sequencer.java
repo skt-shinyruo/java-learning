@@ -24,5 +24,7 @@ public interface Sequencer {
 
     void addGatingSequences(Sequence... sequences);
 
+    boolean removeGatingSequence(Sequence sequence);
+
     SequenceBarrier newBarrier();
 }

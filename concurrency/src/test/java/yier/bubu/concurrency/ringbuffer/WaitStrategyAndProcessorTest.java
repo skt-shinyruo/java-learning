@@ -3,7 +3,9 @@ package yier.bubu.concurrency.ringbuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import org.junit.Assert;
 import org.junit.Test;
@@ -53,6 +55,36 @@ public class WaitStrategyAndProcessorTest {
         assertBarrierCanObservePublishedSequence(new YieldingWaitStrategy());
         assertBarrierCanObservePublishedSequence(new BusySpinWaitStrategy());
         assertBarrierCanObservePublishedSequence(new SleepingWaitStrategy());
+    }
+
+    @Test
+    public void blockingWaitStrategy_shouldWakeWaitingConsumerAfterPublish() throws Exception {
+        RingBuffer<TestEvent> ringBuffer =
+                RingBuffer.createSingleProducer(new TestEventFactory(), 4, new BlockingWaitStrategy());
+        final SequenceBarrier barrier = ringBuffer.newBarrier();
+        FutureTask<Long> waiter = new FutureTask<Long>(new Callable<Long>() {
+            @Override
+            public Long call() throws Exception {
+                return barrier.waitFor(0L);
+            }
+        });
+        Thread waiterThread = new Thread(waiter, "blocking-wait-strategy-test");
+
+        waiterThread.start();
+
+        try {
+            Assert.assertTrue(awaitThreadState(waiterThread, Thread.State.WAITING, 1L, TimeUnit.SECONDS));
+            Assert.assertFalse(waiter.isDone());
+
+            publishValue(ringBuffer, 99);
+
+            Assert.assertEquals(Long.valueOf(0L), waiter.get(1L, TimeUnit.SECONDS));
+            Assert.assertEquals(99, ringBuffer.get(0L).value);
+        } finally {
+            barrier.alert();
+            waiterThread.interrupt();
+            waiterThread.join(1000L);
+        }
     }
 
     @Test
@@ -146,6 +178,23 @@ public class WaitStrategyAndProcessorTest {
             Thread.sleep(10L);
         }
         return !processor.isRunning();
+    }
+
+    private boolean awaitThreadState(Thread thread,
+                                     Thread.State expectedState,
+                                     long timeout,
+                                     TimeUnit unit) throws InterruptedException {
+        long deadlineNanos = System.nanoTime() + unit.toNanos(timeout);
+        while (System.nanoTime() < deadlineNanos) {
+            if (thread.getState() == expectedState) {
+                return true;
+            }
+            if (!thread.isAlive()) {
+                return false;
+            }
+            Thread.sleep(10L);
+        }
+        return thread.getState() == expectedState;
     }
 
     private static final class RecordingHandler implements EventHandler<TestEvent> {

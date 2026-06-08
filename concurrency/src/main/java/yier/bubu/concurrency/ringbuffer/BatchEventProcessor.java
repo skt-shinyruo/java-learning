@@ -11,6 +11,7 @@ public final class BatchEventProcessor<T> implements Runnable {
     private final Sequence sequence = new Sequence(-1L);
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final AtomicBoolean haltRequested = new AtomicBoolean(false);
+    private final AtomicBoolean terminalFailure = new AtomicBoolean(false);
 
     private volatile Thread thread;
 
@@ -25,6 +26,9 @@ public final class BatchEventProcessor<T> implements Runnable {
     }
 
     public void start() {
+        if (terminalFailure.get()) {
+            throw new IllegalStateException("BatchEventProcessor cannot restart after fatal exception");
+        }
         if (!running.compareAndSet(false, true)) {
             throw new IllegalStateException("BatchEventProcessor is already running");
         }
@@ -65,9 +69,17 @@ public final class BatchEventProcessor<T> implements Runnable {
                         sequence.set(nextSequence);
                         nextSequence++;
                     } catch (Throwable exception) {
-                        exceptionHandler.handleEventException(exception, nextSequence, event);
-                        sequence.set(nextSequence);
-                        nextSequence++;
+                        try {
+                            exceptionHandler.handleEventException(exception, nextSequence, event);
+                            sequence.set(nextSequence);
+                            nextSequence++;
+                        } catch (Throwable fatalException) {
+                            terminalFailure.set(true);
+                            haltRequested.set(true);
+                            ringBuffer.removeGatingSequence(sequence);
+                            sequenceBarrier.alert();
+                            return;
+                        }
                     }
                 }
             }
