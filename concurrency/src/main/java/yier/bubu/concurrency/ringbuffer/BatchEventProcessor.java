@@ -1,0 +1,100 @@
+package yier.bubu.concurrency.ringbuffer;
+
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+public final class BatchEventProcessor<T> implements Runnable {
+    private final RingBuffer<T> ringBuffer;
+    private final SequenceBarrier sequenceBarrier;
+    private final EventHandler<T> eventHandler;
+    private final ExceptionHandler<? super T> exceptionHandler;
+    private final Sequence sequence = new Sequence(-1L);
+    private final AtomicBoolean running = new AtomicBoolean(false);
+    private final AtomicBoolean haltRequested = new AtomicBoolean(false);
+    private final AtomicBoolean terminalFailure = new AtomicBoolean(false);
+
+    private volatile Thread thread;
+
+    public BatchEventProcessor(RingBuffer<T> ringBuffer,
+                               SequenceBarrier sequenceBarrier,
+                               EventHandler<T> eventHandler,
+                               ExceptionHandler<? super T> exceptionHandler) {
+        this.ringBuffer = Objects.requireNonNull(ringBuffer, "ringBuffer");
+        this.sequenceBarrier = Objects.requireNonNull(sequenceBarrier, "sequenceBarrier");
+        this.eventHandler = Objects.requireNonNull(eventHandler, "eventHandler");
+        this.exceptionHandler = Objects.requireNonNull(exceptionHandler, "exceptionHandler");
+    }
+
+    public void start() {
+        if (terminalFailure.get()) {
+            throw new IllegalStateException("BatchEventProcessor cannot restart after fatal exception");
+        }
+        if (!running.compareAndSet(false, true)) {
+            throw new IllegalStateException("BatchEventProcessor is already running");
+        }
+        haltRequested.set(false);
+        sequenceBarrier.clearAlert();
+        Thread processorThread = new Thread(this, "batch-event-processor");
+        thread = processorThread;
+        processorThread.start();
+    }
+
+    public void halt() {
+        haltRequested.set(true);
+        sequenceBarrier.alert();
+        Thread processorThread = thread;
+        if (processorThread != null) {
+            processorThread.interrupt();
+        }
+    }
+
+    public boolean isRunning() {
+        return running.get();
+    }
+
+    public Sequence getSequence() {
+        return sequence;
+    }
+
+    @Override
+    public void run() {
+        long nextSequence = sequence.get() + 1L;
+        try {
+            while (!haltRequested.get()) {
+                long availableSequence = sequenceBarrier.waitFor(nextSequence);
+                while (nextSequence <= availableSequence && !haltRequested.get()) {
+                    T event = ringBuffer.get(nextSequence);
+                    try {
+                        eventHandler.onEvent(event, nextSequence);
+                        sequence.set(nextSequence);
+                        nextSequence++;
+                    } catch (Throwable exception) {
+                        try {
+                            exceptionHandler.handleEventException(exception, nextSequence, event);
+                            sequence.set(nextSequence);
+                            nextSequence++;
+                        } catch (Throwable fatalException) {
+                            terminalFailure.set(true);
+                            haltRequested.set(true);
+                            ringBuffer.removeGatingSequence(sequence);
+                            sequenceBarrier.alert();
+                            return;
+                        }
+                    }
+                }
+            }
+        } catch (AlertException exception) {
+            if (!haltRequested.get()) {
+                throw new IllegalStateException("Unexpected alert", exception);
+            }
+        } catch (InterruptedException exception) {
+            if (!haltRequested.get()) {
+                Thread.currentThread().interrupt();
+            }
+        } finally {
+            thread = null;
+            running.set(false);
+            haltRequested.set(false);
+        }
+    }
+}

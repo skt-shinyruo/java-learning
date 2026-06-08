@@ -198,8 +198,11 @@ past the failed event. This prevents one handler failure from permanently
 blocking producers through an unchanged gating sequence.
 
 Provide an alternate fatal handler that halts the processor after a failure.
-Retry policies are out of scope for the first version because they complicate
-ordering and duplicate-processing semantics.
+When a fatal handler stops a registered processor, remove that processor sequence
+from the ring buffer gating set so an abandoned consumer does not permanently
+block producers after the buffer wraps. Retry policies are out of scope for the
+first version because they complicate ordering and duplicate-processing
+semantics.
 
 ## 11. Testing Plan
 

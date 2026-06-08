@@ -72,7 +72,7 @@ Create this documentation file:
 - Create: `concurrency/src/main/java/yier/bubu/concurrency/ringbuffer/ProcessingSequenceBarrier.java`
 - Create: `concurrency/src/main/java/yier/bubu/concurrency/ringbuffer/RingBuffer.java`
 
-- [ ] **Step 1: Write the failing construction tests**
+- [x] **Step 1: Write the failing construction tests**
 
 Create `RingBufferConstructionTest.java` with these tests:
 
@@ -119,7 +119,7 @@ public class RingBufferConstructionTest {
 }
 ```
 
-- [ ] **Step 2: Run the failing construction tests**
+- [x] **Step 2: Run the failing construction tests**
 
 Run:
 
@@ -129,7 +129,7 @@ mvn -pl concurrency -Dtest=RingBufferConstructionTest test
 
 Expected: FAIL because the `ringbuffer` package and `RingBuffer` API do not exist.
 
-- [ ] **Step 3: Create the foundational API files**
+- [x] **Step 3: Create the foundational API files**
 
 Create these files exactly enough to compile the construction tests:
 
@@ -261,7 +261,7 @@ public final class SequenceUtil {
 }
 ```
 
-- [ ] **Step 4: Create minimal sequencer and wait contracts**
+- [x] **Step 4: Create minimal sequencer and wait contracts**
 
 Create:
 
@@ -378,7 +378,7 @@ final class ProcessingSequenceBarrier implements SequenceBarrier {
 }
 ```
 
-- [ ] **Step 5: Create minimal `BlockingWaitStrategy`, `AbstractSequencer`, `SingleProducerSequencer`, and `RingBuffer`**
+- [x] **Step 5: Create minimal `BlockingWaitStrategy`, `AbstractSequencer`, `SingleProducerSequencer`, and `RingBuffer`**
 
 Create:
 
@@ -686,7 +686,7 @@ public final class RingBuffer<T> {
 }
 ```
 
-- [ ] **Step 6: Run construction tests**
+- [x] **Step 6: Run construction tests**
 
 Run:
 
@@ -696,7 +696,7 @@ mvn -pl concurrency -Dtest=RingBufferConstructionTest test
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit Task 1**
+- [x] **Step 7: Commit Task 1**
 
 Run:
 
@@ -713,7 +713,7 @@ git commit -m "feat: add ring buffer construction core"
 - Modify: `concurrency/src/main/java/yier/bubu/concurrency/ringbuffer/RingBuffer.java`
 - Modify: `concurrency/src/main/java/yier/bubu/concurrency/ringbuffer/SingleProducerSequencer.java`
 
-- [ ] **Step 1: Write single-producer publish tests**
+- [x] **Step 1: Write single-producer publish tests**
 
 Create `SingleProducerPublishTest.java`:
 
@@ -778,7 +778,7 @@ public class SingleProducerPublishTest {
 }
 ```
 
-- [ ] **Step 2: Write backpressure tests**
+- [x] **Step 2: Write backpressure tests**
 
 Create `BackpressureTest.java`:
 
@@ -840,7 +840,7 @@ public class BackpressureTest {
 }
 ```
 
-- [ ] **Step 3: Run Task 2 tests**
+- [x] **Step 3: Run Task 2 tests**
 
 Run:
 
@@ -850,7 +850,7 @@ mvn -pl concurrency -Dtest=SingleProducerPublishTest,BackpressureTest test
 
 Expected: PASS if Task 1 implementation already included the publish and backpressure behavior shown there. If a test fails, adjust only `SingleProducerSequencer` and `RingBuffer` to match the tested semantics.
 
-- [ ] **Step 4: Run construction and publishing tests together**
+- [x] **Step 4: Run construction and publishing tests together**
 
 Run:
 
@@ -860,7 +860,7 @@ mvn -pl concurrency -Dtest=RingBufferConstructionTest,SingleProducerPublishTest,
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit Task 2**
+- [x] **Step 5: Commit Task 2**
 
 Run:
 
@@ -880,7 +880,7 @@ git commit -m "feat: support single producer publishing"
 - Create: `concurrency/src/main/java/yier/bubu/concurrency/ringbuffer/LoggingExceptionHandler.java`
 - Modify: `concurrency/src/main/java/yier/bubu/concurrency/ringbuffer/ProcessingSequenceBarrier.java`
 
-- [ ] **Step 1: Write processor and wait-strategy tests**
+- [x] **Step 1: Write processor and wait-strategy tests**
 
 Create `WaitStrategyAndProcessorTest.java`:
 
@@ -1006,7 +1006,7 @@ public class WaitStrategyAndProcessorTest {
 }
 ```
 
-- [ ] **Step 2: Run failing processor tests**
+- [x] **Step 2: Run failing processor tests**
 
 Run:
 
@@ -1016,7 +1016,7 @@ mvn -pl concurrency -Dtest=WaitStrategyAndProcessorTest test
 
 Expected: FAIL because `BatchEventProcessor`, `YieldingWaitStrategy`, `BusySpinWaitStrategy`, `SleepingWaitStrategy`, and `LoggingExceptionHandler` do not exist.
 
-- [ ] **Step 3: Add the remaining wait strategies**
+- [x] **Step 3: Add the remaining wait strategies**
 
 Create:
 
@@ -1111,7 +1111,7 @@ public final class SleepingWaitStrategy implements WaitStrategy {
 }
 ```
 
-- [ ] **Step 4: Add default exception handler**
+- [x] **Step 4: Add default exception handler**
 
 Create:
 
@@ -1128,7 +1128,7 @@ public final class LoggingExceptionHandler<T> implements ExceptionHandler<T> {
 }
 ```
 
-- [ ] **Step 5: Add batch event processor**
+- [x] **Step 5: Add batch event processor**
 
 Create:
 
@@ -1227,7 +1227,7 @@ public final class BatchEventProcessor<T> implements Runnable {
 }
 ```
 
-- [ ] **Step 6: Run processor tests**
+- [x] **Step 6: Run processor tests**
 
 Run:
 
@@ -1237,7 +1237,7 @@ mvn -pl concurrency -Dtest=WaitStrategyAndProcessorTest test
 
 Expected: PASS.
 
-- [ ] **Step 7: Run all ringbuffer tests so far**
+- [x] **Step 7: Run all ringbuffer tests so far**
 
 Run:
 
@@ -1247,7 +1247,7 @@ mvn -pl concurrency -Dtest=RingBufferConstructionTest,SingleProducerPublishTest,
 
 Expected: PASS.
 
-- [ ] **Step 8: Commit Task 3**
+- [x] **Step 8: Commit Task 3**
 
 Run:
 
@@ -1263,7 +1263,7 @@ git commit -m "feat: add ring buffer event processors"
 - Create: `concurrency/src/main/java/yier/bubu/concurrency/ringbuffer/MultiProducerSequencer.java`
 - Modify: `concurrency/src/main/java/yier/bubu/concurrency/ringbuffer/RingBuffer.java`
 
-- [ ] **Step 1: Write multi-producer sequencing tests**
+- [x] **Step 1: Write multi-producer sequencing tests**
 
 Create `MultiProducerSequencerTest.java`:
 
@@ -1350,7 +1350,7 @@ public class MultiProducerSequencerTest {
 }
 ```
 
-- [ ] **Step 2: Run failing multi-producer tests**
+- [x] **Step 2: Run failing multi-producer tests**
 
 Run:
 
@@ -1360,7 +1360,7 @@ mvn -pl concurrency -Dtest=MultiProducerSequencerTest test
 
 Expected: FAIL because `RingBuffer.createMultiProducer(...)` and `MultiProducerSequencer` do not exist.
 
-- [ ] **Step 3: Add multi-producer factory**
+- [x] **Step 3: Add multi-producer factory**
 
 Modify `RingBuffer.java` by adding this factory next to `createSingleProducer(...)`:
 
@@ -1375,7 +1375,7 @@ public static <T> RingBuffer<T> createMultiProducer(
 }
 ```
 
-- [ ] **Step 4: Add multi-producer sequencer**
+- [x] **Step 4: Add multi-producer sequencer**
 
 Create:
 
@@ -1516,7 +1516,7 @@ public final class MultiProducerSequencer extends AbstractSequencer {
 }
 ```
 
-- [ ] **Step 5: Run multi-producer tests**
+- [x] **Step 5: Run multi-producer tests**
 
 Run:
 
@@ -1526,7 +1526,7 @@ mvn -pl concurrency -Dtest=MultiProducerSequencerTest test
 
 Expected: PASS.
 
-- [ ] **Step 6: Run all ringbuffer tests so far**
+- [x] **Step 6: Run all ringbuffer tests so far**
 
 Run:
 
@@ -1536,7 +1536,7 @@ mvn -pl concurrency -Dtest=RingBufferConstructionTest,SingleProducerPublishTest,
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit Task 4**
+- [x] **Step 7: Commit Task 4**
 
 Run:
 
@@ -1552,7 +1552,7 @@ git commit -m "feat: add multi producer sequencing"
 - Create: `concurrency/src/main/java/yier/bubu/concurrency/ringbuffer/FatalExceptionHandler.java`
 - Modify: `concurrency/src/main/java/yier/bubu/concurrency/ringbuffer/BatchEventProcessor.java`
 
-- [ ] **Step 1: Write exception handling tests**
+- [x] **Step 1: Write exception handling tests**
 
 Create `ExceptionHandlingTest.java`:
 
@@ -1658,7 +1658,7 @@ public class ExceptionHandlingTest {
 }
 ```
 
-- [ ] **Step 2: Run failing exception tests**
+- [x] **Step 2: Run failing exception tests**
 
 Run:
 
@@ -1668,7 +1668,7 @@ mvn -pl concurrency -Dtest=ExceptionHandlingTest test
 
 Expected: FAIL because `FatalExceptionHandler` does not exist.
 
-- [ ] **Step 3: Add fatal exception handler**
+- [x] **Step 3: Add fatal exception handler**
 
 Create:
 
@@ -1684,7 +1684,7 @@ public final class FatalExceptionHandler<T> implements ExceptionHandler<T> {
 }
 ```
 
-- [ ] **Step 4: Run exception tests**
+- [x] **Step 4: Run exception tests**
 
 Run:
 
@@ -1694,7 +1694,7 @@ mvn -pl concurrency -Dtest=ExceptionHandlingTest test
 
 Expected: PASS. If the fatal test fails because the processor advances the failed sequence, change `BatchEventProcessor` so a runtime exception thrown by `ExceptionHandler` sets `advanceSequence = false` before leaving the event loop.
 
-- [ ] **Step 5: Run all ringbuffer tests**
+- [x] **Step 5: Run all ringbuffer tests**
 
 Run:
 
@@ -1704,7 +1704,7 @@ mvn -pl concurrency -Dtest=RingBufferConstructionTest,SingleProducerPublishTest,
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit Task 5**
+- [x] **Step 6: Commit Task 5**
 
 Run:
 
@@ -1720,7 +1720,7 @@ git commit -m "feat: add ring buffer exception handlers"
 - Do not modify `mkdocs/mkdocs.yml` in this plan because the current workspace
   already has unrelated uncommitted changes in that file.
 
-- [ ] **Step 1: Create source documentation**
+- [x] **Step 1: Create source documentation**
 
 Create `concurrency/docs/ring-buffer-publisher.md`:
 
@@ -1814,7 +1814,7 @@ handler call.
 processor without advancing the failed sequence.
 ````
 
-- [ ] **Step 2: Inspect MkDocs navigation without editing it**
+- [x] **Step 2: Inspect MkDocs navigation without editing it**
 
 Run:
 
@@ -1825,7 +1825,7 @@ rg -n "concurrency/docs|thread-states|juc|volatile|ring" mkdocs/mkdocs.yml
 Expected: capture whether the page needs a navigation follow-up. Do not edit or
 stage `mkdocs/mkdocs.yml` as part of this feature plan.
 
-- [ ] **Step 3: Run documentation-relevant tests**
+- [x] **Step 3: Run documentation-relevant tests**
 
 Run:
 
@@ -1835,7 +1835,7 @@ mvn -pl concurrency test
 
 Expected: PASS.
 
-- [ ] **Step 4: Commit Task 6**
+- [x] **Step 4: Commit Task 6**
 
 Run:
 
@@ -1850,7 +1850,7 @@ git commit -m "docs: explain ring buffer publisher"
 - No file creation expected.
 - Modify only files required to fix failures found by verification.
 
-- [ ] **Step 1: Run concurrency module tests**
+- [x] **Step 1: Run concurrency module tests**
 
 Run:
 
@@ -1860,7 +1860,7 @@ mvn -pl concurrency test
 
 Expected: PASS.
 
-- [ ] **Step 2: Run full Maven test suite**
+- [x] **Step 2: Run full Maven test suite**
 
 Run:
 
@@ -1870,7 +1870,7 @@ mvn test
 
 Expected: PASS. If unrelated pre-existing failures appear outside the ring-buffer changes, capture the failing module, test class, and failure message before deciding whether to fix or report them.
 
-- [ ] **Step 3: Inspect git status**
+- [x] **Step 3: Inspect git status**
 
 Run:
 
@@ -1880,7 +1880,7 @@ git status --short
 
 Expected: only intentional ring-buffer changes remain. Existing user changes outside this feature must not be reverted.
 
-- [ ] **Step 4: Commit verification fixes if any were made**
+- [x] **Step 4: Commit verification fixes if any were made**
 
 If verification required code fixes, run:
 
