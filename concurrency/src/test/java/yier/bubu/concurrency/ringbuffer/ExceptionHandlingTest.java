@@ -37,6 +37,7 @@ public class ExceptionHandlingTest {
             publishValue(ringBuffer, 2);
 
             Assert.assertTrue(secondEventHandled.await(1L, TimeUnit.SECONDS));
+            Assert.assertTrue(awaitSequence(processor, 1L, 1L, TimeUnit.SECONDS));
             Assert.assertEquals(1L, processor.getSequence().get());
         } finally {
             processor.halt();
@@ -99,6 +100,20 @@ public class ExceptionHandlingTest {
             Thread.sleep(10L);
         }
         return !processor.isRunning();
+    }
+
+    private boolean awaitSequence(BatchEventProcessor<TestEvent> processor,
+                                  long expectedSequence,
+                                  long timeout,
+                                  TimeUnit unit) throws InterruptedException {
+        long deadlineNanos = System.nanoTime() + unit.toNanos(timeout);
+        while (System.nanoTime() < deadlineNanos) {
+            if (processor.getSequence().get() == expectedSequence) {
+                return true;
+            }
+            Thread.sleep(10L);
+        }
+        return processor.getSequence().get() == expectedSequence;
     }
 
     private static final class TestEvent {
