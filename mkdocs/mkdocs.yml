@@ -145,6 +145,7 @@ nav:
       - HotSpot JIT 与 OSR: jvm/content/hotspot-jit-osr.md
       - JDK 动态代理与 InvocationHandler: jvm/content/dynamic-proxy.md
       - MethodHandle 与 invokedynamic: jvm/content/method-handle-invokedynamic.md
+      - Lambda、invokedynamic 与 LambdaMetafactory: jvm/content/lambda-invokedynamic.md
       - GC:
           - GC 类型概览: jvm/content/gc/gc-concepts.md
           - HotSpot OopMap 与 GC Roots: jvm/content/gc/oopmap-gc-roots.md
