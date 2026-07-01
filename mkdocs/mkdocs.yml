@@ -122,6 +122,7 @@ nav:
   - MQ:
       - Overview: mq/index.md
       - Kafka `.log`、`.index`、`.timeindex`：`FileChannel`、`mmap` 与 page cache: mq/content/kafka-log-index-mmap.md
+      - Kafka `VARINT`、`VARLONG` 与 `base + delta`：为什么要这样编码: mq/content/kafka-varint-record-encoding.md
   - JVM:
       - Overview: jvm/index.md
       - JVM Memory: jvm/content/jvm-memory.md
