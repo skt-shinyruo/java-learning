@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-This is a Java 8 multi-module Maven learning repository. Root `pom.xml` aggregates `base`, `algorithm`, `jdk`, `jvm`, `nio`, `netty`, `concurrency`, and `redis`. Java code lives in each module under `src/main/java`; tests live under `src/test/java`. Shared package names follow `yier.bubu.<module>`.
+This is a Java 17 multi-module Maven learning repository. Root `pom.xml` aggregates `base`, `algorithm`, `jdk`, `jvm`, `nio`, `netty`, `concurrency`, and `redis`. Java code lives in each module under `src/main/java`; tests live under `src/test/java`. Shared package names follow `yier.bubu.<module>`.
 
 Documentation is maintained with MkDocs in `mkdocs/`. Module docs remain in paths such as `concurrency/docs/`, `jvm/docs/`, and `redis/docs/`, then are linked into `mkdocs/docs/`. Reference material is stored under `references/`.
 
@@ -19,7 +19,7 @@ Run commands from the repository root.
 
 ## Coding Style & Naming Conventions
 
-Use UTF-8 and Java 8-compatible APIs. Follow the existing Java style: 4-space indentation, braces on the same line, `PascalCase` classes, `camelCase` methods and fields, and uppercase enum constants. Keep examples small and focused; this repo favors readable learning code over framework-heavy abstractions.
+Use UTF-8 and Java 17-compatible APIs. Follow the existing Java style: 4-space indentation, braces on the same line, `PascalCase` classes, `camelCase` methods and fields, and uppercase enum constants. Keep examples small and focused; this repo favors readable learning code over framework-heavy abstractions.
 
 No formatter or linter is configured, so match nearby code. Markdown docs should use clear headings, fenced code blocks, and relative links. Numbered Markdown headings should use numeric dot form such as `## 1. Topic`, not parenthesized form such as `## 1) Topic`.
 

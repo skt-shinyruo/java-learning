@@ -10,7 +10,7 @@
   <packaging>pom</packaging>
 
   <name>java-learning</name>
-  <description>Multi-module Java learning project (JDK8).</description>
+  <description>Multi-module Java learning project (JDK17).</description>
 
   <modules>
     <module>base</module>
@@ -25,8 +25,7 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.source>1.8</maven.compiler.source>
-    <maven.compiler.target>1.8</maven.compiler.target>
+    <maven.compiler.release>17</maven.compiler.release>
 
     <junit.version>4.13.2</junit.version>
     <netty.version>4.1.109.Final</netty.version>
@@ -63,8 +62,7 @@
           <artifactId>maven-compiler-plugin</artifactId>
           <version>3.11.0</version>
           <configuration>
-            <source>${maven.compiler.source}</source>
-            <target>${maven.compiler.target}</target>
+            <release>${maven.compiler.release}</release>
           </configuration>
         </plugin>
         <plugin>
