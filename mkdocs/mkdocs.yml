@@ -88,6 +88,7 @@ nav:
       - Wait / Notify: concurrency/content/wait-notify.md
       - LockSupport: concurrency/content/lock-support.md
       - CountDownLatch / CyclicBarrier / Semaphore: concurrency/content/juc-synchronizers.md
+      - Simple Timing Wheel: concurrency/content/simple-timing-wheel.md
       - ThreadLocal: concurrency/content/thread-local.md
       - Virtual Threads: concurrency/content/virtual-threads.md
       - JMM References:
