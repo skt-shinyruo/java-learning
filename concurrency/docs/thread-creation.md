@@ -490,7 +490,109 @@ t.start();
 
 所以从 JMM 角度看，`start()` 不只是“启动线程”，它还像一次**安全发布**。
 
-### 4.2 线程终止规则：`join()`
+### 4.2 构造函数里启动线程与 `this` 逃逸
+
+还有一个常见说法：
+
+- **在 Java 构造函数中启动线程，会造成 `this` 指针逃逸，这始终是一个隐患。**
+
+这个说法作为工程经验基本正确，但要精确理解：
+
+- 不是“构造函数里调用 `new Thread().start()` 这个动作本身必然导致 `this` 逃逸”
+- 而是“如果新线程能直接或间接拿到当前正在构造的对象引用，就发生了 `this` 逃逸”
+
+典型问题代码：
+
+```java
+class Worker {
+    private int value;
+
+    Worker() {
+        new Thread(() -> {
+            System.out.println(value); // lambda 隐式捕获 this
+        }).start();
+
+        value = 42;
+    }
+}
+```
+
+这里新线程可能在构造函数还没执行完时就运行。它读到的 `value` 可能还是默认值 `0`，也可能看到一个对象不变量尚未建立完成的中间状态。
+
+更直接的写法是：
+
+```java
+class Worker {
+    Worker() {
+        new Thread(this::run).start(); // 直接把 this 交给新线程
+    }
+
+    private void run() {
+        // 使用当前对象状态
+    }
+}
+```
+
+这就是 `this` escape：对象还没有构造完成，`this` 引用已经被另一个线程拿到了。
+
+容易混淆的是，`Thread.start()` 本身有 `happens-before` 语义：
+
+```java
+class Worker {
+    private int value;
+
+    Worker() {
+        value = 42;
+        new Thread(() -> System.out.println(value)).start();
+    }
+}
+```
+
+因为 `value = 42` 在 `start()` 之前，所以新线程启动后的代码可以看到这个写入。但这不等于“构造函数里启动线程就是好设计”，原因是：
+
+- 构造函数还没有返回，对象还处在构造期
+- 对象不变量可能还没完全建立
+- 子类初始化可能还没完成
+- `final` 字段的初始化安全语义要求构造过程中 `this` 不要提前逃逸
+- 后续维护时很容易在 `start()` 后继续添加初始化逻辑，引入竞态
+
+更稳妥的做法是把“构造对象”和“启动线程”拆开：
+
+```java
+class Worker {
+    private final int value;
+
+    Worker(int value) {
+        this.value = value;
+    }
+
+    void start() {
+        new Thread(this::run).start();
+    }
+
+    private void run() {
+        System.out.println(value);
+    }
+}
+```
+
+也可以用静态工厂把顺序收束起来：
+
+```java
+static Worker createAndStart(int value) {
+    Worker worker = new Worker(value);
+    worker.start();
+    return worker;
+}
+```
+
+所以结论是：
+
+- 如果构造函数里启动的线程持有当前对象引用，确实是 `this` 逃逸
+- 严格说，只有新线程直接或间接持有当前对象引用时，才构成 `this` 逃逸
+- 实际代码里这种情况非常常见，所以通常应避免在构造函数中启动线程
+
+### 4.3 线程终止规则：`join()`
 
 一个线程中的所有操作，`happens-before` 其他线程成功从这个线程的 `join()` 返回。
 
@@ -516,7 +618,7 @@ System.out.println(result[0]);
 - `start()` 像“发布起点”
 - `join()` 像“结果收口”
 
-### 4.3 JMM 关注的是“可见性边界”，不是“线程怎么造出来”
+### 4.4 JMM 关注的是“可见性边界”，不是“线程怎么造出来”
 
 这也是很多人最容易混在一起的地方：
 
