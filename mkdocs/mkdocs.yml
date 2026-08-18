@@ -120,11 +120,15 @@ nav:
       - Overview: nio/index.md
       - I/O 基础：同步、异步、阻塞、非阻塞: nio/content/io-sync-async-blocking-nonblocking.md
       - Zero Copy：复制路径和常见类型: nio/content/nio-direct-memory.md
+  - Linux:
+      - Overview: linux/index.md
+      - mmap：从虚拟地址到共享 page cache: linux/content/mmap.md
   - MQ:
       - Overview: mq/index.md
       - Kafka `.log`、`.index`、`.timeindex`：`FileChannel`、`mmap` 与 page cache: mq/content/kafka-log-index-mmap.md
       - Kafka `VARINT`、`VARLONG` 与 `base + delta`：为什么要这样编码: mq/content/kafka-varint-record-encoding.md
       - Kafka Consumer offset commit：手动提交与 partition 内并发处理: mq/content/kafka-consumer-offset-commit.md
+      - Kafka Broker 请求处理链路：Acceptor、Processor、RequestChannel 与 KafkaApis: mq/content/kafka-request-processing.md
   - JVM:
       - Overview: jvm/index.md
       - JVM Memory: jvm/content/jvm-memory.md

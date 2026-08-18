@@ -213,6 +213,76 @@ class Node {
 - 新代码更常见的是 `VarHandle`
 - 老代码或特定 JUC 结构里仍然会看到 `Atomic*FieldUpdater`
 
+### 3.4 RocketMQ 案例：为什么位置字段使用 `AtomicIntegerFieldUpdater`
+
+RocketMQ 的 `DefaultMappedFile` 维护三个位置状态：
+
+- `wrotePosition`：已经写入的位置
+- `committedPosition`：已经提交到文件通道的位置
+- `flushedPosition`：已经刷盘的位置
+
+它们都是直接嵌入 `DefaultMappedFile` 对象的 `volatile int`，并分别由三个类级共享的
+`AtomicIntegerFieldUpdater` 操作。这里是**一个字段对应一个 updater**，不是一个 updater 同时操作三个字段。
+
+这种设计保留了原子读写、CAS 和原子加法能力，同时避免为每个位置创建独立的
+`AtomicInteger`：
+
+```java
+class MappedFileState {
+    private volatile int wrotePosition;
+    private volatile int committedPosition;
+    private volatile int flushedPosition;
+
+    private static final AtomicIntegerFieldUpdater<MappedFileState> WROTE_POSITION_UPDATER =
+            AtomicIntegerFieldUpdater.newUpdater(MappedFileState.class, "wrotePosition");
+    // committedPosition 和 flushedPosition 各自还有一个静态 updater
+}
+```
+
+需要准确区分“字段”和“对象”：
+
+- Java 字段本身没有对象头
+- `AtomicInteger` 是独立的堆对象，才有对象头和对齐开销
+- 宿主对象还需要保存指向 `AtomicInteger` 的引用
+- `static` updater 自身也是对象，但整个类的所有实例共享，开销不会随 `DefaultMappedFile` 实例数线性增长
+
+在典型的 64 位 HotSpot、开启压缩类指针和压缩普通对象指针、按 8 字节对齐的前提下，
+一个只包含 `int value` 的 `AtomicInteger` 通常占 16 字节：
+
+```text
+对象头 12 字节 + int 4 字节 = 16 字节
+```
+
+因此，与这三个位置相关的增量空间可以粗略估算为：
+
+| 方案 | 宿主对象中的字段 | 额外对象 | 合计 |
+| --- | ---: | ---: | ---: |
+| 三个 `AtomicInteger` | 3 个压缩引用，约 12 字节 | 3 x 16 = 48 字节 | 约 60 字节 |
+| 三个 `volatile int` + updater | 3 x 4 = 12 字节 | 每个实例 0 字节 | 约 12 字节 |
+
+所以在上述假设下，每个 `DefaultMappedFile` 大约少三个对象、节省 48 字节。实际结果仍会受
+JDK 版本、压缩指针配置、字段重排和对象对齐影响，应以 JOL 等工具的实测结果为准。对象布局的
+计算方法见 [Java Object Layout](../../jvm/content/java-object-layout.md)。
+
+这项优化的收益主要随 `DefaultMappedFile` 的**实例数量**增长，而不是随每秒处理的消息数直接增长：
+
+- 创建一个 `DefaultMappedFile` 时少分配三个对象，并不是每处理一条消息就少分配三个对象
+- 更少的对象和引用关系可以降低堆占用，并减少 GC 遍历存活对象图的工作量
+- 状态直接嵌入宿主对象还省去一次引用间接访问，可能改善访问局部性
+
+但不能只根据“每秒百万级消息”就断言该优化对吞吐量至关重要。它对延迟、吞吐和 GC 的实际收益
+取决于 `DefaultMappedFile` 数量、对象生命周期、访问模式和 JVM 配置，需要通过内存剖析与基准测试验证。
+
+同样不能把这种布局直接解释成“减少伪共享”。三个相邻的 `volatile int` 可能落在同一个 cache line；
+如果不同线程分别频繁写它们，反而可能产生 cache line 竞争。减少对象间接访问、改善空间局部性和
+避免伪共享是三个不同的问题，不能混为一谈。
+
+最后，`AtomicIntegerFieldUpdater` 虽然在 JDK API 中被称为 reflection-based utility，但反射主要用于
+创建 updater 时定位并校验字段；热点更新不是每次通过 `Field.get()` / `Field.set()` 完成。可以结合
+[RocketMQ `DefaultMappedFile` 源码](https://github.com/apache/rocketmq/blob/73e8fdbdb8b04282305ff579cf0901835bb983b5/store/src/main/java/org/apache/rocketmq/store/logfile/DefaultMappedFile.java)
+和 [JDK 17 `AtomicIntegerFieldUpdater` API](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/atomic/AtomicIntegerFieldUpdater.html)
+查看完整约束与操作语义。
+
 ---
 
 ## 4. `AtomicInteger.compareAndSet()` 往下是怎么实现的
