@@ -49,7 +49,23 @@ A -> B 或 B -> C 的复制是否真的被省掉？
 
 ## 2. 普通 I/O 的基础复制路径
 
-### 2.1 普通 socket read 路径
+### 2.1 什么是内核缓冲区
+
+“内核缓冲区”不是一个固定对象，而是内核管理的、用于缓存、排队和组织 I/O 数据的内存及数据结构的统称。应用程序不能直接访问它们，只能通过 `read`、`write`、`send`、`recv` 等系统调用交换数据。
+
+常见对应关系如下：
+
+| I/O 对象 | 主要内核缓冲区 | 作用 |
+| --- | --- | --- |
+| 普通文件 | page cache | 缓存文件页，并把脏页异步写回存储设备 |
+| socket | receive buffer、send buffer | 暂存应用尚未读取或内核尚未发送的数据 |
+| 网卡 | DMA ring、descriptor 队列 | 让网卡和驱动协调收发数据所在的内存页 |
+
+因此，“文件的内核缓冲区就是 page cache，socket 的内核缓冲区就是 socket buffer”可以作为入门理解；实际路径还会经过 TCP/IP 协议栈、驱动队列等其他内核对象。
+
+用户态 buffer 则是应用或运行时持有的内存，例如 Java 的 `byte[]`、`ByteBuffer` 和 Netty `ByteBuf`。`ByteBuffer.allocateDirect()` 的数据虽在 JVM 堆外，仍属于用户态内存，不是内核缓冲区。
+
+### 2.2 普通 socket read 路径
 
 普通 TCP 接收数据时，可以简化成：
 
@@ -78,7 +94,7 @@ A -> B 或 B -> C 的复制是否真的被省掉？
 
 这通常对应内核里的 `copy_to_user` 路径。
 
-### 2.2 普通 socket write 路径
+### 2.3 普通 socket write 路径
 
 普通 TCP 发送数据时，可以简化成：
 
@@ -100,7 +116,7 @@ A -> B 或 B -> C 的复制是否真的被省掉？
 
 这通常对应内核里的 `copy_from_user` 路径。
 
-### 2.3 DMA 在这里的含义
+### 2.4 DMA 在这里的含义
 
 DMA 不是“数据不移动”。DMA 的意思是设备可以直接和内存搬运数据，不需要 CPU 用 `memcpy` 一样的方式亲自复制每个字节。
 
@@ -313,6 +329,18 @@ page cache
 
 也就是说，文件内容已经在内核 page cache 里，但普通 read 仍然会把数据复制到用户态 buffer。
 
+写文件时，常见方向相反：
+
+```text
+用户态 buffer
+    ↓ copy_from_user
+page cache（脏页）
+    ↓ 异步回写
+磁盘
+```
+
+这里的 page cache 是文件 I/O 中最主要的内核缓存，但不是所有文件访问都必经它；例如使用 `O_DIRECT` 时，内核会尽量绕过 page cache。
+
 ### 4.2 `mmap` / `MappedByteBuffer`
 
 `mmap` 的核心思路是把文件的 page cache 映射到用户进程地址空间。
@@ -394,6 +422,8 @@ fileChannel.transferTo(position, count, socketChannel);
 ```
 
 更具体地说，是避免文件数据先复制到用户态，再从用户态复制回内核 socket 路径。
+
+调用方没有创建或传入 `ByteBuffer`，不代表底层绝对不存在用户态临时 buffer。操作系统、文件系统或目标 channel 不支持 `sendfile` 快路径时，JDK 可能回退到基于 `read` / `write` 的实现；但在支持的文件到 socket 场景，文件 payload 不会进入 Java 应用可见的 `byte[]` 或 `ByteBuffer`。
 
 如果数据需要 TLS 加密、gzip 压缩、业务改写，文件到 socket 的 zero-copy 路径通常会被打断，因为应用层必须读取或变换数据。
 
