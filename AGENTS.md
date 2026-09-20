@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-This is a Java 17 multi-module Maven learning repository. Root `pom.xml` aggregates `base`, `algorithm`, `jdk`, `jvm`, `nio`, `netty`, `concurrency`, and `redis`. Java code lives in each module under `src/main/java`; tests live under `src/test/java`. Shared package names follow `yier.bubu.<module>`.
+This is a Java 17 multi-module Maven learning repository. Root `pom.xml` aggregates `base`, `algorithm`, `jdk`, `jvm`, `nio`, `netty`, `concurrency`, `redis`, and `playground`. The `playground` module is a pure aggregator for small self-contained projects; each sub-project (currently `playground/live-chat`) is its own Maven module. Java code lives in each module under `src/main/java`; tests live under `src/test/java`. Shared package names follow `yier.bubu.<module>` (sub-projects use `yier.bubu.playground.<project>`, e.g. `yier.bubu.playground.livechat`).
 
 Documentation is maintained with MkDocs in `mkdocs/`. Module docs remain in paths such as `concurrency/docs/`, `jvm/docs/`, and `redis/docs/`, then are linked into `mkdocs/docs/`. Reference material is stored under `references/`.
 

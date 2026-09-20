@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>在线客服 Demo - Netty WebSocket</title>
+<style>
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; }
+  h2 { margin-bottom: 12px; }
+  #messages { border: 1px solid #ddd; border-radius: 8px; height: 320px; overflow-y: auto; padding: 12px; background: #fafafa; }
+  .msg { margin: 6px 0; padding: 8px 10px; border-radius: 6px; line-height: 1.5; word-break: break-all; }
+  .msg.chat { background: #e8f0fe; }
+  .msg.chat.me { background: #dcf8c6; text-align: right; }
+  .msg.system { color: #666; font-style: italic; text-align: center; background: transparent; }
+  .msg.closed { color: #b00020; text-align: center; font-weight: bold; background: #fdecea; }
+  #bar { display: flex; gap: 8px; margin-top: 12px; }
+  #input { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 6px; }
+  button { padding: 8px 16px; border: none; border-radius: 6px; background: #4a76d1; color: #fff; cursor: pointer; }
+  button:disabled { background: #aaa; cursor: not-allowed; }
+  #reconnect { background: #3a9e5c; }
+</style>
+</head>
+<body>
+<h2>在线客服 Demo</h2>
+<div id="messages"></div>
+<div id="bar">
+  <input id="input" placeholder="输入消息，回车发送" disabled>
+  <button id="send" disabled>发送</button>
+  <button id="reconnect" style="display:none">重新连接</button>
+</div>
+<script>
+var messagesEl = document.getElementById('messages');
+var inputEl = document.getElementById('input');
+var sendBtn = document.getElementById('send');
+var reconnectBtn = document.getElementById('reconnect');
+var ws = null;
+
+function addMessage(type, content, mine) {
+  var div = document.createElement('div');
+  div.className = 'msg ' + type + (mine ? ' me' : '');
+  div.textContent = content;
+  messagesEl.appendChild(div);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function setConnected(connected) {
+  inputEl.disabled = !connected;
+  sendBtn.disabled = !connected;
+  reconnectBtn.style.display = connected ? 'none' : '';
+}
+
+function connect() {
+  var scheme = location.protocol === 'https:' ? 'wss://' : 'ws://';
+  ws = new WebSocket(scheme + location.host + '/ws');
+  ws.onopen = function () { setConnected(true); };
+  ws.onmessage = function (event) {
+    var msg = JSON.parse(event.data);
+    addMessage(msg.type, msg.content, false);
+    if (msg.type === 'closed') {
+      setConnected(false);
+    }
+  };
+  ws.onclose = function () { setConnected(false); };
+}
+
+function send() {
+  var text = inputEl.value.trim();
+  if (!text || !ws || ws.readyState !== WebSocket.OPEN) { return; }
+  ws.send(JSON.stringify({ type: 'chat', content: text }));
+  addMessage('chat', text, true);
+  inputEl.value = '';
+  inputEl.focus();
+}
+
+sendBtn.addEventListener('click', send);
+inputEl.addEventListener('keydown', function (e) { if (e.key === 'Enter') { send(); } });
+reconnectBtn.addEventListener('click', connect);
+
+connect();
+</script>
+</body>
+</html>

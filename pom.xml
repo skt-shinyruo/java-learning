@@ -20,7 +20,7 @@
     <module>nio</module>
     <module>netty</module>
     <module>concurrency</module>
-    <module>redis</module>
+    <module>playground</module>
   </modules>
 
   <properties>
