@@ -1,6 +1,8 @@
 # live-chat：Netty WebSocket 在线客服 demo
 
-一个单进程、零依赖安装的网页客服对话 demo：浏览器打开页面自动建立 WebSocket 连接，机器人客服自动应答；客户超过 3 分钟没有回复，服务端主动关闭会话并通知客户。
+一个单进程、零依赖安装的网页客服对话 demo：浏览器打开页面自动建立 WebSocket 连接，机器人客服自动应答；客户超过 10 秒没有回复，服务端主动关闭会话并通知客户。
+
+超时时长在 `ChatServer.DEFAULT_SESSION_TIMEOUT` 中定义（10 秒，方便本地测试；线上场景一般设 3 分钟）。
 
 来源：[issue #3](https://github.com/skt-shinyruo/java-learning/issues/3)。学习目标不是构建生产级客服系统，而是两个点：
 
@@ -16,18 +18,18 @@ mvn -pl playground/live-chat exec:java -Dexec.mainClass=yier.bubu.playground.liv
 启动后浏览器访问 <http://localhost:8080/>：
 
 - 连接建立即收到欢迎消息，同时开始静默计时
-- 每条客户消息重置计时；机器人消息**不**重置（规则严格是"客户 3 分钟没说话"）
-- 静默满 3 分钟：服务端先发 `closed` 系统消息（页面输入框随之禁用），再关闭连接
-- 点"重新连接"即开启全新会话（无会话恢复，一连接即一会话）
+- 每条客户消息重置计时；机器人消息**不**重置（规则严格是"客户没说话"）
+- 静默满 10 秒：服务端先发 `closed` 系统消息（页面输入框随之禁用），再关闭连接
 
 ## 架构
 
-```
-浏览器 ──GET /──▶ HttpServerCodec → HttpObjectAggregator ─┐（普通 HTTP：返回聊天页）
-                                                          ├─ HttpStaticPageHandler
-浏览器 ──GET /ws (Upgrade: websocket)──▶ 同一条 pipeline ─┤
-                                                          ├─ WebSocketServerProtocolHandler("/ws") 拦截升级
-                                                          └─ WebSocketChatHandler（升级后的聊天逻辑）
+```mermaid
+flowchart LR
+  B["浏览器"] -->|"GET /（普通 HTTP）"| P["同一条 pipeline<br/>HttpServerCodec → HttpObjectAggregator"]
+  B -->|"GET /ws（Upgrade: websocket）"| P
+  P --> S["HttpStaticPageHandler<br/>返回聊天页"]
+  P --> W["WebSocketServerProtocolHandler('/ws')<br/>拦截升级请求"]
+  W --> C["WebSocketChatHandler<br/>升级后的聊天逻辑"]
 ```
 
 组件（全部在 `yier.bubu.playground.livechat` 包，6 个类）：

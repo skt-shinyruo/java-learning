@@ -19,7 +19,7 @@ import java.time.Duration;
 public final class ChatServer {
 
     public static final int DEFAULT_PORT = 8080;
-    public static final Duration DEFAULT_SESSION_TIMEOUT = Duration.ofMinutes(3);
+    public static final Duration DEFAULT_SESSION_TIMEOUT = Duration.ofSeconds(10);
 
     private final int port;
     private final Duration sessionTimeout;
@@ -81,7 +81,7 @@ public final class ChatServer {
         ChatServer server = new ChatServer(DEFAULT_PORT, DEFAULT_SESSION_TIMEOUT);
         Channel channel = server.start();
         System.out.println("客服聊天 demo 已启动：http://localhost:" + server.port() + "/");
-        System.out.println("客户静默超过 " + DEFAULT_SESSION_TIMEOUT.toMinutes() + " 分钟后，服务端将主动关闭会话。");
+        System.out.println("客户静默超过 " + DEFAULT_SESSION_TIMEOUT.toSeconds() + " 秒后，服务端将主动关闭会话。");
         channel.closeFuture().sync();
         server.stop();
     }
